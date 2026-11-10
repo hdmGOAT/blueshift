@@ -15,6 +15,8 @@
   --line: rgba(254, 252, 251, 0.07);
   --line-strong: rgba(254, 252, 251, 0.14);
   --hi: rgba(254, 252, 251, 0.06);
+  --modal: #08163a; /* history modal surface */
+  --modal-head: #0b1c46; /* sticky table header inside it */
   --ink: var(--white);
   --ink-2: rgba(254, 252, 251, 0.72);
   --ink-3: rgba(254, 252, 251, 0.46);
@@ -37,6 +39,8 @@
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
   --color-hi: var(--hi);
+  --color-modal: var(--modal);
+  --color-modal-head: var(--modal-head);
   --color-ink: var(--ink);
   --color-ink-2: var(--ink-2);
   --color-ink-3: var(--ink-3);

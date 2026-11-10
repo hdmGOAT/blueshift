@@ -2,7 +2,7 @@
 
 **Be An Earth System Trend Detective.** BlueShift compares NASA satellite ocean data (sea-surface temperature and chlorophyll-a) with Philippine Statistics Authority fisheries statistics, to show how changing ocean conditions relate to fish landings and what that could mean for food security. The first study area is Mindanao.
 
-> **Prototype.** This is a UI mockup. All numbers are deterministic **sample data** generated in `src/lib/data.ts`, not real NASA or PSA figures.
+> **Prototype.** This is a UI mockup. All numbers are deterministic **sample data** generated in `src/lib/data/`, not real NASA or PSA figures.
 
 ## What's in the mockup
 
@@ -22,17 +22,25 @@ npm run dev
 
 Then open http://localhost:3000.
 
-Stack: Next.js 16 (App Router), TypeScript, Tailwind CSS 4, d3 (scale, shape, geo).
+Stack: Next.js 16 (App Router), TypeScript, Tailwind CSS 4, d3 (scale, shape, geo), Vitest.
+
+## Working on it
+
+```bash
+npm run check   # typecheck + lint + tests, run before every commit
+```
+
+The code is organised by feature under `src/features/` (map, species panels, history modal, timeline, fish images), with all data behind one module, `src/lib/data`. **[AGENTS.md](AGENTS.md) has the full map of the code, the rules, and step-by-step recipes** (add a species, add a panel section, connect the backend). Read it before making changes; it is written for both people and AI coding assistants.
 
 ## Connecting real data
 
-The UI reads everything through `src/lib/data.ts`. To wire in the FastAPI backend, replace the generated series with API responses that use the same shapes:
+The UI reads everything through `src/lib/data`. To wire in the FastAPI backend, replace the sample generators in `ocean.ts`, `landings.ts` and `stats.ts` there with API responses that keep the same shapes:
 
 - `YIELDS[scope][speciesId]`: quarterly landings in tonnes. The Q4 2026 point carries `low` and `high` bounds.
 - `OCEAN[scope]`: quarterly SST and chlorophyll-a values and anomalies.
 - `CORRELATION[scope][speciesId]`: `{ sst, chl }` Pearson r.
 
-Here `scope` is `"all"` or a region id (`ix`, `x`, `xi`, `xii`, `xiii`, `barmm`).
+Here `scope` is `"all"` or a region id (`ix`, `x`, `xi`, `xii`, `xiii`, `barmm`). The types are in `src/lib/data/types.ts`.
 
 ## Credits
 

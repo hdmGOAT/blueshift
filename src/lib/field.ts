@@ -1,13 +1,18 @@
-import { scaleLinear, scaleLog } from "d3-scale";
+// The coloured ocean layer on the map.
+// SAMPLE: a synthetic gridded field standing in for NASA MODIS-Aqua L3 tiles.
+// With real data, replace sstAt/chlAt with lookups into the fetched grid.
+//
+// Performance: colours come from a 256-step lookup table, and each rendered
+// frame (layer + quarter) is cached, so replaying the timeline costs nothing.
 import { OCEAN, type Layer } from "./data";
 
-// Synthetic gridded ocean field standing in for NASA MODIS-Aqua L3 tiles.
 export const FIELD_BOUNDS = { west: 118.4, east: 128.2, south: 3.6, north: 11.4 };
-export const FIELD_STEP = 0.1;
+const FIELD_STEP = 0.1; // degrees per pixel
 
 const blob = (lon: number, lat: number, cx: number, cy: number, s: number) =>
   Math.exp(-((lon - cx) ** 2 + (lat - cy) ** 2) / (2 * s * s));
 
+/** Sea-surface temperature (°C) at a point for one quarter. */
 export function sstAt(lon: number, lat: number, index: number) {
   const o = OCEAN.all[index];
   const q = (index % 4) + 1;
@@ -23,6 +28,7 @@ export function sstAt(lon: number, lat: number, index: number) {
   return v;
 }
 
+/** Chlorophyll-a (mg/m³) at a point for one quarter. */
 export function chlAt(lon: number, lat: number, index: number) {
   const o = OCEAN.all[index];
   let v = o.chl * 0.55;
@@ -39,27 +45,47 @@ export function chlAt(lon: number, lat: number, index: number) {
   return Math.max(0.05, v);
 }
 
-export const SST_DOMAIN = [27.8, 30.6] as const;
-export const CHL_DOMAIN = [0.06, 1.0] as const;
+// ---- Colour ramps ----------------------------------------------------------
 
-const SST_STOPS = ["#034078", "#1282a2", "#7cc6d6", "#ebe6d6", "#eba571", "#d4583a", "#8e2a1c"];
-const CHL_STOPS = ["#0c3a5e", "#11607a", "#1f8a7a", "#5fae5f", "#b9d46c", "#f1e9a6"];
+export const SST_DOMAIN = [27.8, 30.6] as const; // °C, linear
+export const CHL_DOMAIN = [0.06, 1.0] as const; // mg/m³, log
 
-export const sstColor = scaleLinear<string>()
-  .domain(SST_STOPS.map((_, i) => SST_DOMAIN[0] + ((SST_DOMAIN[1] - SST_DOMAIN[0]) * i) / (SST_STOPS.length - 1)))
-  .range(SST_STOPS)
-  .clamp(true);
+export const SST_GRADIENT = ["#034078", "#1282a2", "#7cc6d6", "#ebe6d6", "#eba571", "#d4583a", "#8e2a1c"];
+export const CHL_GRADIENT = ["#0c3a5e", "#11607a", "#1f8a7a", "#5fae5f", "#b9d46c", "#f1e9a6"];
 
-const chlLog = scaleLog().domain(CHL_DOMAIN).range([0, 1]).clamp(true);
-const chlLin = scaleLinear<string>()
-  .domain(CHL_STOPS.map((_, i) => i / (CHL_STOPS.length - 1)))
-  .range(CHL_STOPS);
-export const chlColor = (v: number) => chlLin(chlLog(v));
+const hex = (h: string) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
 
-export const SST_GRADIENT = SST_STOPS;
-export const CHL_GRADIENT = CHL_STOPS;
+/** 256 RGB triples interpolated evenly across the colour stops. */
+function buildLut(stops: string[]) {
+  const rgb = stops.map(hex);
+  const lut = new Uint8ClampedArray(256 * 3);
+  for (let i = 0; i < 256; i++) {
+    const p = (i / 255) * (rgb.length - 1);
+    const a = Math.min(rgb.length - 2, Math.floor(p));
+    const f = p - a;
+    for (let c = 0; c < 3; c++) lut[i * 3 + c] = rgb[a][c] + (rgb[a + 1][c] - rgb[a][c]) * f;
+  }
+  return lut;
+}
+const SST_LUT = buildLut(SST_GRADIENT);
+const CHL_LUT = buildLut(CHL_GRADIENT);
 
+const clamp01 = (t: number) => (t < 0 ? 0 : t > 1 ? 1 : t);
+const sstT = (v: number) => clamp01((v - SST_DOMAIN[0]) / (SST_DOMAIN[1] - SST_DOMAIN[0]));
+const CHL_LOG_SPAN = Math.log(CHL_DOMAIN[1] / CHL_DOMAIN[0]);
+const chlT = (v: number) => clamp01(Math.log(v / CHL_DOMAIN[0]) / CHL_LOG_SPAN);
+
+// ---- Rendering -------------------------------------------------------------
+
+const frameCache = new Map<string, string>();
+
+/** A PNG data URL of the field for one layer and quarter. Browser only. */
 export function renderField(layer: Layer, index: number): string {
+  if (typeof document === "undefined") return "";
+  const key = `${layer}:${index}`;
+  const hit = frameCache.get(key);
+  if (hit) return hit;
+
   const { west, east, south, north } = FIELD_BOUNDS;
   const cols = Math.round((east - west) / FIELD_STEP);
   const rows = Math.round((north - south) / FIELD_STEP);
@@ -68,27 +94,22 @@ export function renderField(layer: Layer, index: number): string {
   canvas.height = rows;
   const ctx = canvas.getContext("2d")!;
   const img = ctx.createImageData(cols, rows);
+  const lut = layer === "sst" ? SST_LUT : CHL_LUT;
   for (let r = 0; r < rows; r++) {
     const lat = north - (r + 0.5) * FIELD_STEP;
     for (let c = 0; c < cols; c++) {
       const lon = west + (c + 0.5) * FIELD_STEP;
-      const col = layer === "sst" ? sstColor(sstAt(lon, lat, index)) : chlColor(chlAt(lon, lat, index));
-      const n = parseRgb(col);
+      const t = layer === "sst" ? sstT(sstAt(lon, lat, index)) : chlT(chlAt(lon, lat, index));
+      const j = Math.round(t * 255) * 3;
       const k = (r * cols + c) * 4;
-      img.data[k] = n[0];
-      img.data[k + 1] = n[1];
-      img.data[k + 2] = n[2];
+      img.data[k] = lut[j];
+      img.data[k + 1] = lut[j + 1];
+      img.data[k + 2] = lut[j + 2];
       img.data[k + 3] = 255;
     }
   }
   ctx.putImageData(img, 0, 0);
-  return canvas.toDataURL();
-}
-
-function parseRgb(s: string): [number, number, number] {
-  if (s.startsWith("#")) {
-    return [parseInt(s.slice(1, 3), 16), parseInt(s.slice(3, 5), 16), parseInt(s.slice(5, 7), 16)];
-  }
-  const m = s.match(/\d+/g)!;
-  return [+m[0], +m[1], +m[2]];
+  const url = canvas.toDataURL();
+  frameCache.set(key, url);
+  return url;
 }
