@@ -1,0 +1,87 @@
+{
+ "tamban": {
+  "file": "tamban.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Sardinella_gibbosa.jpg",
+  "license": "CC BY-SA 4.0",
+  "artist": "BEDO (Thailand)"
+ },
+ "galunggong": {
+  "file": "galunggong.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Decapterus_(Ifremer_00535-64709_-_8951).jpg",
+  "license": "CC BY 4.0",
+  "artist": "Marc Taquet",
+  "flip": true
+ },
+ "tulingan": {
+  "file": "tulingan.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Auxide_(Auxis_thazard)_(Ifremer_00763-87516).jpg",
+  "license": "CC BY 4.0",
+  "artist": "Louis Wambergue (IFREMER, D\u00e9l\u00e9gation oc\u00e9an Indien (DOI), D\u00e9partement Ressources Biologiques et Environnement (RBE), F-97"
+ },
+ "bangus": {
+  "file": "bangus.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Poisson_lait_(Chanos_chanos)_(Ifremer_00763-87541).jpg",
+  "license": "CC BY 4.0",
+  "artist": "Hugues Evano (IFREMER, D\u00e9l\u00e9gation oc\u00e9an Indien (DOI), D\u00e9partement Ressources Biologiques et Environnement (RBE), F-97420"
+ },
+ "tambakol": {
+  "file": "tambakol.png",
+  "source": "https://commons.wikimedia.org/wiki/File:Thunnus_albacares.png",
+  "license": "Public domain",
+  "artist": "Unknown authorUnknown author"
+ },
+ "tilapia": {
+  "file": "tilapia.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Oreochromis_niloticus_Thailand.jpg",
+  "license": "CC BY 3.0",
+  "artist": "Sahat Ratmuangkhwang"
+ },
+ "dilis": {
+  "file": "dilis.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Stolephorus_indicus.jpg",
+  "license": "CC BY-SA 4.0",
+  "artist": "BEDO (Thailand)"
+ },
+ "matambaka": {
+  "file": "matambaka.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Fish4443_-_Flickr_-_NOAA_Photo_Library.jpg",
+  "license": "Public domain",
+  "artist": "SEFSC Pascagoula Laboratory; Collection of Brandi Noble, NOAA/NMFS/SEFSC."
+ },
+ "alumahan": {
+  "file": "alumahan.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Rastrelliger_kanagurta_Thailand.jpg",
+  "license": "CC BY 3.0",
+  "artist": "Sahat Ratmuangkhwang"
+ },
+ "dalagangbukid": {
+  "file": "dalagangbukid.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:XRF-Pterocaesio_tile.jpg",
+  "license": "CC BY 3.0",
+  "artist": "Xavier Romero-Frias"
+ },
+ "bisugo": {
+  "file": "bisugo.png",
+  "source": "https://commons.wikimedia.org/wiki/File:Nemipterus_japonicus_Pakistan.png",
+  "license": "CC BY-SA 3.0",
+  "artist": "Hamid Badar Osmany"
+ },
+ "tanigue": {
+  "file": "tanigue.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Narrow-barred_spanish_mackerel_(Scomberomorus_commerson).jpg",
+  "license": "CC BY 2.0",
+  "artist": "Rickard Zerpe"
+ },
+ "mayamaya": {
+  "file": "mayamaya.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Vivaneau_des_mangroves_(Lutjanus_argentimaculatus)_(Ifremer_00761-87296).jpg",
+  "license": "CC BY 4.0",
+  "artist": "Fanchon Varenne (IFREMER, D\u00e9l\u00e9gation oc\u00e9an Indien (DOI), D\u00e9partement Ressources Biologiques et Environnement (RBE), F-97"
+ },
+ "lapulapu": {
+  "file": "lapulapu.jpg",
+  "source": "https://commons.wikimedia.org/wiki/File:Epinephelus_coioides_Thailand.jpg",
+  "license": "CC BY 3.0",
+  "artist": "Sahat Ratmuangkhwang"
+ }
+}
