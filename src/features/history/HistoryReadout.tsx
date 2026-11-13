@@ -17,7 +17,7 @@ export function HistoryReadout({ row, scope, grain }: { row: Row | null; scope: 
                   {signed(row.yoy, 1)}% YoY
                 </span>
               )}
-              {row.projected && <span className="ml-2 text-[12px] text-forecast">{grain === "q" ? "projected" : "incl. Q4 projection"}</span>}
+              {row.partial && <span className="ml-2 text-[12px] text-ink-3">Q1–Q3 only</span>}
             </>
           ) : (
             <span className="text-ink-2">{regionName(scope)}</span>

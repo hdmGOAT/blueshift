@@ -27,7 +27,15 @@
   --accent-text: #5cc0dc;
   --warm: #ef8a6a;
   --cool: #5cc0dc;
-  --forecast: #e8b85c;
+  --chl: #5fae5f; /* chlorophyll-a series */
+  --good: #7fc98a;
+
+  /* categorical series, in fixed order (validated on the dark surface) */
+  --series-1: #3f9ad0;
+  --series-2: #ad8c26;
+  --series-3: #9a78e4;
+  --series-4: #e0654a;
+  --series-5: #3a9a62;
 
   color-scheme: dark;
 }
@@ -51,7 +59,8 @@
   --color-prussian: var(--prussian-blue);
   --color-warm: var(--warm);
   --color-cool: var(--cool);
-  --color-forecast: var(--forecast);
+  --color-chl: var(--chl);
+  --color-good: var(--good);
   --font-sans: var(--font-inter);
   --font-display: var(--font-inter);
   --font-mono: var(--font-dm-mono);

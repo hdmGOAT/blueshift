@@ -1,6 +1,24 @@
 // Shared data types. Every other data module and the UI import from here
 // (through "@/lib/data").
 
+/** A province. `id` is a slug of the name used in src/data/mindanao.json. */
+export type Province = {
+  id: string;
+  name: string;
+  region: RegionId;
+  /** False for landlocked provinces: their ocean values are their region's waters. */
+  coastal: boolean;
+  /** Sample-data generator inputs: relative size of marine and inland/pond fisheries. */
+  marine: number;
+  inland: number;
+};
+
+/**
+ * Any area the filters can select: "all" (Mindanao), a region id or a
+ * province id. Region and province ids never collide.
+ */
+export type AreaId = string;
+
 /** Which satellite variable the map and charts are showing. */
 export type Layer = "sst" | "chl";
 
@@ -44,8 +62,8 @@ export type Quarter = { index: number; year: number; q: number };
 /** Ocean conditions for one quarter. `*Anom` is the departure from normal. */
 export type OceanPoint = { index: number; sst: number; sstAnom: number; chl: number; chlAnom: number };
 
-/** Landings for one quarter, in tonnes. `low`/`high` exist only on the forecast quarter. */
-export type YieldPoint = { index: number; value: number; low?: number; high?: number };
+/** Landings for one quarter, in tonnes. */
+export type YieldPoint = { index: number; value: number };
 
 /** Pearson r between landings and each ocean variable. */
 export type Corr = { sst: number; chl: number };

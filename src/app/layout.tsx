@@ -7,8 +7,8 @@ const inter = Inter({ variable: "--font-inter", subsets: ["latin"], axes: ["opsz
 const dmMono = DM_Mono({ variable: "--font-dm-mono", subsets: ["latin"], weight: ["400", "500"] });
 
 export const metadata: Metadata = {
-  title: "BlueShift · Mindanao",
-  description: "Sea temperature, chlorophyll-a and fish landings across Mindanao.",
+  title: "BlueShift · Earth system trend detective",
+  description: "Explore how changing ocean conditions (NASA satellite SST and chlorophyll-a) relate to Philippine fisheries production (PSA) across Mindanao.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

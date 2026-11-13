@@ -1,5 +1,5 @@
 // Builds the table/chart rows for the history modal. Pure, no React.
-import { FORECAST_INDEX, OCEAN, QUARTERS, REGIONS, YEARS, YIELDS, annualTotal, quarterLabel, type RegionId, type Scope, type Species } from "@/lib/data";
+import { COMPLETE_YEARS, OCEAN, QUARTERS, REGIONS, YEARS, YIELDS, annualTotal, quarterLabel, type RegionId, type Scope, type Species } from "@/lib/data";
 
 /** "q" = one row per quarter, "y" = one row per year. */
 export type Grain = "q" | "y";
@@ -16,8 +16,8 @@ export type Row = {
   sstAnom: number;
   chl: number;
   chlAnom: number;
-  /** True when the row is, or includes, the forecast quarter. */
-  projected: boolean;
+  /** True for a year with fewer than four observed quarters (2026). */
+  partial: boolean;
   /** Change vs the same period a year earlier, in percent. */
   yoy: number | null;
 };
@@ -43,7 +43,7 @@ export function buildRows(species: Species, scope: Scope, grain: Grain): Row[] {
       sstAnom: ocean[i].sstAnom,
       chl: ocean[i].chl,
       chlAnom: ocean[i].chlAnom,
-      projected: i === FORECAST_INDEX,
+      partial: false,
       yoy: pctChange(series[i].value, i >= 4 ? series[i - 4].value : null),
     }));
   }
@@ -61,7 +61,7 @@ export function buildRows(species: Species, scope: Scope, grain: Grain): Row[] {
       sstAnom: mean("sstAnom"),
       chl: mean("chl"),
       chlAnom: mean("chlAnom"),
-      projected: quarters.includes(FORECAST_INDEX),
+      partial: !COMPLETE_YEARS.includes(year),
       yoy: pctChange(total, yi > 0 ? annualTotal(scope, species.id, year - 1) : null),
     };
   });

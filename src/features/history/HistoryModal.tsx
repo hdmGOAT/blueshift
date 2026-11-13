@@ -93,7 +93,7 @@ export default function HistoryModal({ initialSpeciesId, initialScope, onClose, 
         <div className="scroll-thin grid min-h-0 flex-1 grid-cols-1 overflow-y-auto lg:grid-cols-[minmax(0,1fr)_380px]">
           <div className="min-w-0 px-5 py-4">
             <HistoryReadout row={hovered} scope={scope} grain={grain} />
-            <HistoryChart species={species} scope={scope} grain={grain} rows={rows} regions={regions} hover={hover} onHover={setHover} />
+            <HistoryChart species={species} grain={grain} rows={rows} regions={regions} hover={hover} onHover={setHover} />
             {scope === "all" && (
               <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11.5px] text-ink-3">
                 {REGIONS.map((r) => (

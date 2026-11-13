@@ -1,13 +1,13 @@
 "use client";
 
 // The big chart in the history modal. Quarterly = stacked areas by region
-// with a total line and the forecast point; annual = stacked bars. Two strips
+// with a total line; annual = stacked bars. Two strips
 // underneath show the SST and chlorophyll anomaly for each period.
 import { memo, useMemo } from "react";
 import { scaleBand, scaleLinear } from "d3-scale";
 import { area, curveMonotoneX, line, stack, type SeriesPoint } from "d3-shape";
 import { stripeColor } from "@/lib/colors";
-import { FORECAST_INDEX, LAST_OBSERVED, QUARTERS, YIELDS, type Region, type RegionId, type Scope, type Species } from "@/lib/data";
+import { QUARTERS, type Region, type RegionId, type Species } from "@/lib/data";
 import type { Grain, Row } from "./rows";
 
 // Layout in viewBox units.
@@ -26,7 +26,6 @@ const STRIPS = [
 
 type Props = {
   species: Species;
-  scope: Scope;
   grain: Grain;
   rows: Row[];
   /** Regions being stacked (all six, or the selected one). */
@@ -36,28 +35,25 @@ type Props = {
   onHover: (i: number | null) => void;
 };
 
-export const HistoryChart = memo(function HistoryChart({ species, scope, grain, rows, regions, hover, onHover }: Props) {
+export const HistoryChart = memo(function HistoryChart({ species, grain, rows, regions, hover, onHover }: Props) {
   // Scales and paths depend only on the rows, so hovering does not rebuild them.
   const g = useMemo(() => {
     const y = scaleLinear().domain([0, Math.max(...rows.map((r) => r.total)) * 1.06]).range([TOP + PLOT_H, TOP]).nice(4);
     const band = scaleBand<number>().domain(rows.map((_, i) => i)).range([LEFT, W - RIGHT]).paddingInner(grain === "y" ? 0.28 : 0.12);
     const xc = (i: number) => band(i)! + band.bandwidth() / 2;
     const stacked = stack<Row, RegionId>().keys(regions.map((r) => r.id)).value((d, k) => d.byRegion[k])(rows);
-    // Quarterly charts draw observed quarters only; the forecast is a separate marker.
-    const observed = grain === "q" ? LAST_OBSERVED + 1 : rows.length;
     const areaGen = area<SeriesPoint<Row>>().x((_, i) => xc(i)).y0((d) => y(d[0])).y1((d) => y(d[1])).curve(curveMonotoneX);
     return {
       y,
       band,
       xc,
       stacked,
-      areas: grain === "q" ? stacked.map((layer) => areaGen(layer.slice(0, observed)) ?? "") : [],
-      totalLine: grain === "q" ? (line<Row>().x((_, i) => xc(i)).y((d) => y(d.total)).curve(curveMonotoneX)(rows.slice(0, observed)) ?? "") : "",
+      areas: grain === "q" ? stacked.map((layer) => areaGen(layer) ?? "") : [],
+      totalLine: grain === "q" ? (line<Row>().x((_, i) => xc(i)).y((d) => y(d.total)).curve(curveMonotoneX)(rows) ?? "") : "",
     };
   }, [rows, regions, grain]);
 
   const { y, band, xc } = g;
-  const forecast = YIELDS[scope][species.id][FORECAST_INDEX];
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full" onMouseLeave={() => onHover(null)} role="img" aria-label={`${species.local} landings history`}>
@@ -80,7 +76,7 @@ export const HistoryChart = memo(function HistoryChart({ species, scope, grain, 
                   y={y(d[1])}
                   width={band.bandwidth()}
                   height={Math.max(0, y(d[0]) - y(d[1]))}
-                  opacity={rows[i].projected ? 0.45 : hover === null || hover === i ? 0.95 : 0.55}
+                  opacity={hover === null || hover === i ? 0.95 : 0.55}
                   rx={li === g.stacked.length - 1 ? 2 : 0}
                 />
               ))}
@@ -91,9 +87,6 @@ export const HistoryChart = memo(function HistoryChart({ species, scope, grain, 
       {grain === "q" && (
         <>
           <path d={g.totalLine} fill="none" stroke="var(--white)" strokeWidth={1.4} />
-          <line x1={xc(LAST_OBSERVED)} y1={y(rows[LAST_OBSERVED].total)} x2={xc(FORECAST_INDEX)} y2={y(forecast.value)} stroke="var(--forecast)" strokeWidth={1.4} strokeDasharray="2 3" />
-          <line x1={xc(FORECAST_INDEX)} x2={xc(FORECAST_INDEX)} y1={y(forecast.high!)} y2={y(forecast.low!)} stroke="var(--forecast)" strokeWidth={2} strokeLinecap="round" />
-          <circle cx={xc(FORECAST_INDEX)} cy={y(forecast.value)} r={3.5} fill="var(--modal)" stroke="var(--forecast)" strokeWidth={1.6} />
         </>
       )}
 

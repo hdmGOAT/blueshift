@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { REGIONS } from "@/lib/data";
-import { CX, CY, HOME, K_MAX, K_MIN, REGION_PATH, REGION_VIEW, clampView, lonLatAt, scaleBar, toBase, toScreen } from "./geometry";
+import { PROVINCES, REGIONS } from "@/lib/data";
+import { CX, CY, HOME, PROVINCE_SHAPES, K_MAX, K_MIN, REGION_PATH, REGION_VIEW, clampView, lonLatAt, scaleBar, toBase, toScreen } from "./geometry";
 
 describe("view transform", () => {
   it("round-trips between base and screen space", () => {
@@ -53,6 +53,13 @@ describe("regions", () => {
       expect(REGION_VIEW[r.id].k).toBeGreaterThan(1);
       expect(clampView(REGION_VIEW[r.id])).toEqual(REGION_VIEW[r.id]);
     }
+  });
+});
+
+describe("provinces", () => {
+  it("has a map shape for every listed province", () => {
+    expect(PROVINCE_SHAPES.map((p) => p.id).sort()).toEqual(PROVINCES.map((p) => p.id).sort());
+    for (const p of PROVINCE_SHAPES) expect(p.d.length).toBeGreaterThan(20);
   });
 });
 

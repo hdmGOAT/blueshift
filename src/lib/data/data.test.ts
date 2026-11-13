@@ -1,7 +1,7 @@
 // Guards the data seam. If you change the sample generators on purpose, the
 // "reference values" test will fail: update the numbers in the same commit.
 import { describe, expect, it } from "vitest";
-import { CORRELATION, FORECAST_INDEX, OCEAN, QUARTERS, REGIONS, SCOPES, SPECIES, YIELDS, annualTotal, catchMix, topSpecies } from "@/lib/data";
+import { COMPLETE_YEARS, CORRELATION, OCEAN, PROVINCES, PROVINCE_OCEAN, QUARTERS, REGIONS, SCOPES, SPECIES, YIELDS, areaOcean, areaYields, annualTotal, catchMix, provincesOf, topSpecies } from "@/lib/data";
 
 describe("shape", () => {
   it("has a full series for every scope and species", () => {
@@ -11,11 +11,21 @@ describe("shape", () => {
     }
   });
 
-  it("puts an uncertainty band on the forecast quarter only", () => {
-    const series = YIELDS.all.galunggong;
-    expect(series[FORECAST_INDEX].low).toBeLessThan(series[FORECAST_INDEX].value);
-    expect(series[FORECAST_INDEX].high).toBeGreaterThan(series[FORECAST_INDEX].value);
-    expect(series[0].low).toBeUndefined();
+  it("covers observed quarters only, Q1 2016 to Q3 2026", () => {
+    expect(QUARTERS).toHaveLength(43);
+    expect(COMPLETE_YEARS).toEqual([2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]);
+  });
+
+  it("has a full series for every province", () => {
+    for (const p of PROVINCES) {
+      expect(areaOcean(p.id)).toHaveLength(QUARTERS.length);
+      for (const s of SPECIES) expect(areaYields(p.id, s.id)).toHaveLength(QUARTERS.length);
+    }
+  });
+
+  it("gives every region at least one province, with unique ids", () => {
+    for (const r of REGIONS) expect(provincesOf(r.id).length).toBeGreaterThan(0);
+    expect(new Set(PROVINCES.map((p) => p.id)).size).toBe(PROVINCES.length);
   });
 
   it("splits each species across regions with shares that sum to 1", () => {
@@ -33,6 +43,19 @@ describe("invariants", () => {
         const sum = REGIONS.reduce((a, r) => a + YIELDS[r.id][s.id][index].value, 0);
         expect(YIELDS.all[s.id][index].value).toBeCloseTo(sum, 6);
       }
+  });
+
+  it("makes each region the sum of its provinces", () => {
+    for (const r of REGIONS)
+      for (const s of SPECIES)
+        for (const { index } of QUARTERS) {
+          const sum = provincesOf(r.id).reduce((a, p) => a + areaYields(p.id, s.id)[index].value, 0);
+          expect(sum).toBeCloseTo(YIELDS[r.id][s.id][index].value, 6);
+        }
+  });
+
+  it("gives landlocked provinces their region's waters", () => {
+    expect(PROVINCE_OCEAN.bukidnon).toBe(OCEAN.x);
   });
 
   it("keeps correlations inside [-1, 1]", () => {
@@ -60,14 +83,15 @@ describe("reference values (sample data is deterministic)", () => {
     expect(CORRELATION.all.galunggong.chl).toBeCloseTo(0.54, 3);
     expect(OCEAN.all[42].sst).toBeCloseTo(29.497, 3);
     expect(OCEAN.xi[10].chl).toBeCloseTo(0.265, 3);
-    expect(YIELDS.all.galunggong[43].high! - YIELDS.all.galunggong[43].value).toBeCloseTo(500, 6);
     expect(annualTotal("all", "galunggong", 2025)).toBeGreaterThan(0);
+    expect(areaYields("zamboanga-del-norte", "tamban")[42].value).toBeCloseTo(3607.741, 2);
+    expect(areaOcean("davao-oriental")[10].sst).toBeCloseTo(29.305, 3);
   });
 
   it("matches the grand total of all landings", () => {
     let sum = 0;
     for (const scope of SCOPES) for (const s of SPECIES) for (const p of YIELDS[scope][s.id]) sum += p.value;
-    expect(sum).toBeCloseTo(8972962.083, 2);
+    expect(sum).toBeCloseTo(8780769.77, 2);
   });
 
   it("ranks species per region", () => {

@@ -1,9 +1,11 @@
-// SAMPLE DATA: quarterly sea-surface temperature and chlorophyll-a per scope.
-// Replace with NASA MODIS-Aqua series from the backend; keep the OCEAN shape.
+// SAMPLE DATA: quarterly sea-surface temperature and chlorophyll-a per scope
+// and province. Replace with NASA MODIS-Aqua series (averaged over each area's
+// coastal waters) from the backend; keep the OCEAN and PROVINCE_OCEAN shapes.
 import { gauss, mulberry32 } from "./random";
+import { PROVINCES, PROVINCE_BY_ID, isRegion } from "./provinces";
 import { REGIONS } from "./regions";
 import { QUARTERS } from "./time";
-import type { OceanPoint, RegionId, Scope } from "./types";
+import type { AreaId, OceanPoint, RegionId, Scope } from "./types";
 
 // ENSO-like signal: warm 2016, 2019-20 mild, 2023-24 strong, cooling after.
 const enso = (t: number) =>
@@ -51,6 +53,33 @@ const BY_REGION = Object.fromEntries(
 
 /** OCEAN[scope][quarterIndex] */
 export const OCEAN: Record<Scope, OceanPoint[]> = { all: OCEAN_ALL, ...BY_REGION };
+
+// Provinces: their region's waters plus a local offset. Landlocked provinces
+// have no coastline, so they report their region's waters unchanged.
+export const PROVINCE_OCEAN: Record<string, OceanPoint[]> = Object.fromEntries(
+  PROVINCES.map((p, pi) => {
+    const region = BY_REGION[p.region];
+    if (!p.coastal) return [p.id, region];
+    const rand = mulberry32(300 + pi * 31);
+    const dSst = (rand() - 0.5) * 0.3;
+    const dChl = (rand() - 0.5) * 0.06;
+    return [
+      p.id,
+      region.map((o) => {
+        const sstAnom = o.sstAnom + gauss(rand) * 0.035;
+        const chlAnom = o.chlAnom + gauss(rand) * 0.005;
+        return { index: o.index, sst: o.sst - o.sstAnom + sstAnom + dSst, sstAnom, chl: Math.max(0.03, o.chl - o.chlAnom + chlAnom + dChl), chlAnom };
+      }),
+    ];
+  }),
+);
+
+/** Quarterly ocean conditions for any area (Mindanao, region or province). */
+export function areaOcean(area: AreaId): OceanPoint[] {
+  if (area === "all" || isRegion(area)) return OCEAN[area as Scope];
+  if (!PROVINCE_BY_ID[area]) throw new Error(`Unknown area: ${area}`);
+  return PROVINCE_OCEAN[area];
+}
 
 /** Mean of one field over a range of quarters [from, to). */
 export function oceanMean(scope: Scope, key: keyof Omit<OceanPoint, "index">, from: number, to: number) {

@@ -27,7 +27,7 @@ export const PeriodTable = memo(function PeriodTable({ rows, grain, hover, onHov
                 <tr key={r.key} onMouseEnter={() => onHover(i)} onMouseLeave={() => onHover(null)} className={`border-t border-line ${hover === i ? "bg-hi" : ""}`}>
                   <td className="px-2.5 py-1.5">
                     {r.label}
-                    {r.projected && <span className="ml-1.5 text-[10.5px] text-forecast">proj.</span>}
+                    {r.partial && <span className="ml-1.5 text-[10.5px] text-ink-3">Q1–Q3</span>}
                   </td>
                   <td className="px-2.5 py-1.5 text-right text-ink-2">{fmt(r.total)}</td>
                   <td className="px-2.5 py-1.5 text-right" style={{ color: r.yoy === null ? undefined : trendColor(r.yoy) }}>

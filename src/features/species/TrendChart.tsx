@@ -1,11 +1,11 @@
 "use client";
 
-// Small chart: quarterly landings for one species (line + forecast point)
+// Small chart: quarterly landings for one species
 // above an ocean-anomaly strip, with a cursor at the selected quarter.
 import { useMemo } from "react";
 import { scaleLinear } from "d3-scale";
 import { area, curveMonotoneX, line } from "d3-shape";
-import { FORECAST_INDEX, LAST_OBSERVED, OCEAN, YIELDS, type Layer, type Scope, type Species, type YieldPoint } from "@/lib/data";
+import { LAST_OBSERVED, OCEAN, YIELDS, type Layer, type Scope, type Species, type YieldPoint } from "@/lib/data";
 
 // Layout in viewBox units.
 const W = 300;
@@ -24,8 +24,8 @@ export function TrendChart({ species, scope, index, layer }: Props) {
   // are not rebuilt while the timeline plays.
   const g = useMemo(() => {
     const data = YIELDS[scope][species.id];
-    const x = scaleLinear().domain([0, FORECAST_INDEX]).range([LEFT, W - RIGHT]);
-    const vals = data.flatMap((p) => [p.value, p.high ?? p.value, p.low ?? p.value]);
+    const x = scaleLinear().domain([0, LAST_OBSERVED]).range([LEFT, W - RIGHT]);
+    const vals = data.map((p) => p.value);
     const y = scaleLinear().domain([Math.min(...vals) * 0.94, Math.max(...vals) * 1.03]).range([PLOT_H, 6]).nice(3);
     const observed = data.slice(0, LAST_OBSERVED + 1);
 
@@ -45,8 +45,6 @@ export function TrendChart({ species, scope, index, layer }: Props) {
   }, [species.id, scope, layer]);
 
   const { data, x, y } = g;
-  const last = data[LAST_OBSERVED];
-  const forecast = data[FORECAST_INDEX];
   const uid = `${species.id}-${scope}`;
 
   return (
@@ -73,12 +71,9 @@ export function TrendChart({ species, scope, index, layer }: Props) {
         </g>
       ))}
 
-      {/* landings + forecast */}
+      {/* landings */}
       <path d={g.fillPath} fill={`url(#fill-${uid})`} />
       <path d={g.linePath} fill="none" stroke="var(--accent-text)" strokeWidth={1.6} />
-      <line x1={x(last.index)} y1={y(last.value)} x2={x(forecast.index)} y2={y(forecast.value)} stroke="var(--forecast)" strokeWidth={1.4} strokeDasharray="2 3" />
-      <line x1={x(forecast.index)} x2={x(forecast.index)} y1={y(forecast.high!)} y2={y(forecast.low!)} stroke="var(--forecast)" strokeWidth={1.4} strokeLinecap="round" />
-      <circle cx={x(forecast.index)} cy={y(forecast.value)} r={2.8} fill="var(--paper)" stroke="var(--forecast)" strokeWidth={1.4} />
 
       {/* ocean anomaly: above normal one colour, below another */}
       <line x1={LEFT} x2={W - RIGHT} y1={g.zeroY} y2={g.zeroY} stroke="var(--line-strong)" />

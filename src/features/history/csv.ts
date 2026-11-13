@@ -4,8 +4,8 @@ import { scopeRegions, type Grain, type Row } from "./rows";
 
 export function toCsv(scope: Scope, rows: Row[]) {
   const regions = scopeRegions(scope);
-  const head = ["period", "landings_t", ...regions.map((r) => `${r.id}_t`), "sst_c", "chl_mg_m3", "projected"];
-  const body = rows.map((r) => [r.label, r.total.toFixed(0), ...regions.map((g) => r.byRegion[g.id].toFixed(0)), r.sst.toFixed(2), r.chl.toFixed(3), r.projected ? "1" : "0"]);
+  const head = ["period", "landings_t", ...regions.map((r) => `${r.id}_t`), "sst_c", "chl_mg_m3", "partial_year"];
+  const body = rows.map((r) => [r.label, r.total.toFixed(0), ...regions.map((g) => r.byRegion[g.id].toFixed(0)), r.sst.toFixed(2), r.chl.toFixed(3), r.partial ? "1" : "0"]);
   return [head, ...body].map((line) => line.join(",")).join("\n");
 }
 

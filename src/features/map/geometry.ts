@@ -13,7 +13,7 @@ import { geoGraticule, geoMercator, geoPath } from "d3-geo";
 import type { Feature, FeatureCollection } from "geojson";
 import context from "@/data/context.json";
 import mindanao from "@/data/mindanao.json";
-import { REGIONS, REGION_BY_PSGC, SEAS, type RegionId } from "@/lib/data";
+import { PROVINCE_BY_NAME, REGIONS, REGION_BY_PSGC, SEAS, type RegionId } from "@/lib/data";
 import { FIELD_BOUNDS } from "@/lib/field";
 
 // ---- Layout (SVG viewBox units) ---------------------------------------------
@@ -83,6 +83,14 @@ export const PROVINCE_LABELS = MIND.features
   })
   .filter((p) => !p.name.includes("Not a Province") && !NOT_PROVINCES.includes(p.name));
 
+/** Each listed province's own path, for choropleth maps (see ProvinceMap.tsx). */
+export const PROVINCE_SHAPES = MIND.features.flatMap((f) => {
+  const p = PROVINCE_BY_NAME[(f.properties as { name: string }).name];
+  return p ? [{ id: p.id, name: p.name, d: path(f) ?? "", centroid: path.centroid(f) as [number, number] }] : [];
+});
+/** Unlisted areas (Isabela City, Special Geographic Area), drawn as plain land. */
+export const OTHER_LAND_PATH = MIND.features.filter((f) => !PROVINCE_BY_NAME[(f.properties as { name: string }).name]).map((f) => path(f) ?? "").join("");
+
 export const SEA_POINTS = SEAS.map((s) => {
   const [x, y] = projection([s.lon, s.lat])!;
   return { ...s, x, y };
@@ -100,6 +108,8 @@ export const FIELD_RECT = { x: fx0, y: fy0, width: fx1 - fx0, height: fy1 - fy0 
 // ---- View limits ----------------------------------------------------------------
 
 const LAND = path.bounds(MIND);
+/** Mindanao's bounding box in base space, padded, as an SVG viewBox. */
+export const LAND_VIEWBOX = `${LAND[0][0] - 4} ${LAND[0][1] - 10} ${LAND[1][0] - LAND[0][0] + 14} ${LAND[1][1] - LAND[0][1] + 20}`;
 const clampAxis = (c: number, lo: number, hi: number, half: number) =>
   lo + half > hi - half ? (lo + hi) / 2 : Math.min(hi - half, Math.max(lo + half, c));
 

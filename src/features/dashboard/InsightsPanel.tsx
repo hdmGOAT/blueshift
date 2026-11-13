@@ -4,7 +4,7 @@ import { Block } from "@/components/ui/Block";
 import { ExpandIcon } from "@/components/ui/icons";
 import { CatchMix } from "@/features/species/CatchMix";
 import { KeyFinding } from "@/features/species/KeyFinding";
-import { Outlook } from "@/features/species/Outlook";
+import { QuarterStat } from "@/features/species/QuarterStat";
 import { SpeciesIdentity } from "@/features/species/SpeciesIdentity";
 import { TrendChart } from "@/features/species/TrendChart";
 import { regionName, type Layer, type Scope, type Species } from "@/lib/data";
@@ -34,7 +34,7 @@ export function InsightsPanel({ scope, index, layer, selected, onSelect, onOpenH
         <SpeciesIdentity species={selected} />
         <div className="label mb-1 mt-3">Landings, t</div>
         <TrendChart species={selected} scope={scope} index={index} layer={layer} />
-        <Outlook species={selected} scope={scope} index={index} />
+        <QuarterStat species={selected} scope={scope} index={index} />
       </Block>
       <Block title={`Catch mix · ${regionName(scope)}`}>
         <CatchMix scope={scope} index={index} selectedId={selected.id} onSelect={onSelect} />

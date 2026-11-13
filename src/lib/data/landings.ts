@@ -1,12 +1,14 @@
-// SAMPLE DATA: quarterly fish landings (tonnes) per scope and species.
-// Replace with PSA statistics + the model forecast from the backend; keep the
-// YIELDS shape. "all" is always the sum of the six regions.
+// SAMPLE DATA: quarterly fish landings (tonnes) per scope, province and species.
+// Replace with PSA statistics from the backend; keep the YIELDS and
+// PROVINCE_YIELDS shapes. "all" is the sum of the six regions, and each region
+// is the sum of its provinces.
 import { OCEAN } from "./ocean";
 import { gauss, mulberry32 } from "./random";
+import { PROVINCE_BY_ID, isRegion, provincesOf } from "./provinces";
 import { REGIONS, SCOPES } from "./regions";
 import { SPECIES } from "./species";
-import { FORECAST_INDEX, QUARTERS } from "./time";
-import type { Habitat, MixRow, RegionId, Scope, YieldPoint } from "./types";
+import { QUARTERS } from "./time";
+import type { AreaId, Habitat, MixRow, Province, RegionId, Scope, Species, YieldPoint } from "./types";
 
 /** Seasonal multiplier per quarter (Q1..Q4). Also used to de-season in stats.ts. */
 export const HABITAT_SEASON: Record<Habitat, number[]> = {
@@ -14,13 +16,6 @@ export const HABITAT_SEASON: Record<Habitat, number[]> = {
   Reef: [1.04, 1.0, 0.95, 1.01],
   Aquaculture: [0.9, 1.02, 1.1, 0.98],
   Freshwater: [0.98, 1.0, 1.03, 0.99],
-};
-
-// The forecast quarter carries an uncertainty band (model target: ±500 t).
-const withBand = (index: number, value: number, cap: number): YieldPoint => {
-  if (index !== FORECAST_INDEX) return { index, value };
-  const band = Math.min(cap, value * 0.06);
-  return { index, value, low: value - band, high: value + band };
 };
 
 const BY_REGION = Object.fromEntries(
@@ -36,7 +31,7 @@ const BY_REGION = Object.fromEntries(
           const o = OCEAN[r.id][index];
           const effect = 1 + s.sstSens * sens * o.sstAnom * 1.1 + s.chlSens * sens * (o.chlAnom / 0.03) * 0.12;
           const value = base * HABITAT_SEASON[s.habitat][q - 1] * (1 + trend * (index / 4)) * effect * (1 + gauss(rand) * 0.08);
-          return withBand(index, value, 500 * s.shares[ri] + 60);
+          return { index, value };
         });
         return [s.id, pts];
       }),
@@ -47,12 +42,50 @@ const BY_REGION = Object.fromEntries(
 const ALL: Record<string, YieldPoint[]> = Object.fromEntries(
   SPECIES.map((s) => [
     s.id,
-    QUARTERS.map(({ index }) => withBand(index, REGIONS.reduce((a, r) => a + BY_REGION[r.id][s.id][index].value, 0), 500)),
+    QUARTERS.map(({ index }) => ({ index, value: REGIONS.reduce((a, r) => a + BY_REGION[r.id][s.id][index].value, 0) })),
   ]),
 );
 
 /** YIELDS[scope][speciesId][quarterIndex] */
 export const YIELDS: Record<Scope, Record<string, YieldPoint[]>> = { all: ALL, ...BY_REGION };
+
+// ---- Provinces: each region's landings split across its provinces -----------
+
+/** How much of a species a province lands, before noise: sea vs pond/inland. */
+function provinceWeight(p: Province, s: Species) {
+  if (s.habitat === "Freshwater") return p.inland;
+  if (s.habitat === "Aquaculture") return 0.5 * p.marine + 0.5 * p.inland;
+  return p.marine;
+}
+
+const BY_PROVINCE: Record<string, Record<string, YieldPoint[]>> = {};
+REGIONS.forEach((r, ri) => {
+  const provs = provincesOf(r.id);
+  SPECIES.forEach((s, si) => {
+    const rand = mulberry32(900 + ri * 211 + si * 17);
+    // Each province has its own affinity for a species and a slow drift.
+    const base = provs.map((p) => provinceWeight(p, s) * (0.6 + rand() * 0.8));
+    const drift = provs.map(() => (rand() - 0.5) * 0.05);
+    const series = provs.map(() => [] as YieldPoint[]);
+    for (const { index } of QUARTERS) {
+      const w = base.map((b, pi) => b * Math.max(0.05, 1 + drift[pi] * (index / 4) + gauss(rand) * 0.06));
+      const sum = w.reduce((a, b) => a + b, 0) || 1;
+      const total = BY_REGION[r.id][s.id][index].value;
+      w.forEach((wi, pi) => series[pi].push({ index, value: (total * wi) / sum }));
+    }
+    provs.forEach((p, pi) => ((BY_PROVINCE[p.id] ??= {})[s.id] = series[pi]));
+  });
+});
+
+/** PROVINCE_YIELDS[provinceId][speciesId][quarterIndex] */
+export const PROVINCE_YIELDS = BY_PROVINCE;
+
+/** Quarterly landings of one species in any area (Mindanao, region or province). */
+export function areaYields(area: AreaId, speciesId: string): YieldPoint[] {
+  if (area === "all" || isRegion(area)) return YIELDS[area as Scope][speciesId];
+  if (!PROVINCE_BY_ID[area]) throw new Error(`Unknown area: ${area}`);
+  return PROVINCE_YIELDS[area][speciesId];
+}
 
 /** Largest single-quarter value in each scope. Used to size map bubbles. */
 export const scopeMax = Object.fromEntries(

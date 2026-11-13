@@ -75,6 +75,13 @@ const sstT = (v: number) => clamp01((v - SST_DOMAIN[0]) / (SST_DOMAIN[1] - SST_D
 const CHL_LOG_SPAN = Math.log(CHL_DOMAIN[1] / CHL_DOMAIN[0]);
 const chlT = (v: number) => clamp01(Math.log(v / CHL_DOMAIN[0]) / CHL_LOG_SPAN);
 
+/** CSS colour for one value on the layer's ramp (for choropleths). */
+export function fieldColor(layer: Layer, v: number) {
+  const lut = layer === "sst" ? SST_LUT : CHL_LUT;
+  const j = Math.round((layer === "sst" ? sstT(v) : chlT(v)) * 255) * 3;
+  return `rgb(${lut[j]},${lut[j + 1]},${lut[j + 2]})`;
+}
+
 // ---- Rendering -------------------------------------------------------------
 
 const frameCache = new Map<string, string>();

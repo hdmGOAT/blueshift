@@ -1,11 +1,11 @@
 "use client";
 
-// The dock at the bottom: play/pause, the current quarter, and a strip of 44
+// The dock at the bottom: play/pause, the current quarter, and a strip of
 // quarters shaded by ocean anomaly. Click or drag the strip to scrub.
 import { memo, useMemo, useRef } from "react";
 import { PauseIcon, PlayIcon } from "@/components/ui/icons";
 import { stripeColor } from "@/lib/colors";
-import { FORECAST_INDEX, OCEAN, QUARTERS, YEARS, quarterLabel, type Layer, type Scope } from "@/lib/data";
+import { OCEAN, QUARTERS, YEARS, quarterLabel, type Layer, type Scope } from "@/lib/data";
 
 type Props = {
   index: number;
@@ -18,12 +18,10 @@ type Props = {
 
 const N = QUARTERS.length;
 const pct = (i: number) => `${((i / N) * 100).toFixed(3)}%`;
-const FORECAST_HATCH = "repeating-linear-gradient(45deg, rgba(232,184,92,0.5) 0 2px, transparent 2px 5px)";
 
 export const Timeline = memo(function Timeline({ index, setIndex, playing, setPlaying, layer, scope }: Props) {
   const trackRef = useRef<HTMLDivElement>(null);
   const colors = useMemo(() => OCEAN[scope].map((o) => stripeColor(layer, o)), [layer, scope]);
-  const isForecast = index === FORECAST_INDEX;
 
   const scrubTo = (clientX: number) => {
     const el = trackRef.current;
@@ -43,8 +41,8 @@ export const Timeline = memo(function Timeline({ index, setIndex, playing, setPl
       </button>
 
       <div className="w-[76px] shrink-0">
-        <div className={`font-display text-[17px] font-medium leading-tight ${isForecast ? "text-forecast" : "text-ink"}`}>{quarterLabel(index)}</div>
-        <div className="text-[11px] text-ink-3">{isForecast ? "Projected" : "Observed"}</div>
+        <div className="font-display text-[17px] font-medium leading-tight text-ink">{quarterLabel(index)}</div>
+        <div className="text-[11px] text-ink-3">Observed</div>
       </div>
 
       <div className="min-w-0 flex-1">
@@ -74,7 +72,7 @@ export const Timeline = memo(function Timeline({ index, setIndex, playing, setPl
               <div
                 key={q.index}
                 className={`h-full flex-1 ${q.q === 1 && q.index > 0 ? "ml-[3px]" : ""}`}
-                style={q.index === FORECAST_INDEX ? { background: FORECAST_HATCH } : { background: colors[q.index], opacity: q.index > index ? 0.55 : 1 }}
+                style={{ background: colors[q.index], opacity: q.index > index ? 0.55 : 1 }}
               />
             ))}
           </div>
