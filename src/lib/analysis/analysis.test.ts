@@ -43,13 +43,13 @@ describe("stats", () => {
 describe("series", () => {
   it("builds annual periods from complete years only", () => {
     expect(periods("annual", 2024, 2026).map((p) => p.label)).toEqual(["2024", "2025"]);
-    expect(periods("quarterly", 2026, 2026)).toHaveLength(3);
+    expect(periods("quarterly", 2026, 2026)).toHaveLength(2);
   });
 
   it("sums landings over the chosen species", () => {
     const per = periods("annual", 2020, 2020);
     const both = yieldSeries("xi", ["bangus", "tamban"], per)[0];
-    expect(both).toBeCloseTo(yieldSeries("xi", ["bangus"], per)[0] + yieldSeries("xi", ["tamban"], per)[0], 6);
+    expect(both).toBeCloseTo(yieldSeries("xi", ["bangus"], per)[0]! + yieldSeries("xi", ["tamban"], per)[0]!, 6);
   });
 
   it("removes the seasonal cycle", () => {
@@ -59,20 +59,32 @@ describe("series", () => {
   });
 });
 
-const BASE: AnalysisParams = { area: "all", species: "galunggong", variable: "sst", resolution: "quarterly", from: 2016, to: 2026, lag: 0, deseason: true, detrend: false };
+const BASE: AnalysisParams = { area: "all", species: "galunggong", variable: "sst", resolution: "quarterly", from: 2003, to: 2026, lag: 0, deseason: true, detrend: false };
 
 describe("runAnalysis", () => {
-  it("finds the built-in negative SST link for round scad", () => {
+  it("pairs every observed quarter for Mindanao", () => {
     const a = runAnalysis(BASE);
-    expect(a.stats!.n).toBe(43);
-    expect(a.stats!.pearson).toBeLessThan(-0.4);
-    expect(a.stats!.pPearson).toBeLessThan(0.05);
-    expect(a.interpretation.level).toBe("significant");
-    expect(a.interpretation.headline).toMatch(/negative/);
+    expect(a.stats!.n).toBe(94);
+    expect(a.missing).toBe(0);
+    expect(Math.abs(a.stats!.pearson)).toBeLessThanOrEqual(1);
+    expect(a.interpretation.headline.length).toBeGreaterThan(0);
+  });
+
+  it("skips unrecorded quarters instead of treating them as zero", () => {
+    const a = runAnalysis({ ...BASE, area: "davao-occidental", species: "bangus" });
+    expect(a.missing).toBeGreaterThan(60); // no landings before 2019
+    expect(a.pairs).toHaveLength(94 - a.missing);
+    expect(a.pairs.every((p) => Number.isFinite(p.y))).toBe(true);
+    expect(a.interpretation.caveats.join(" ")).toMatch(/no recorded landings and were left out/);
+  });
+
+  it("warns about the Zamboanga del Sur reporting break", () => {
+    expect(runAnalysis({ ...BASE, area: "ix" }).interpretation.caveats[0]).toMatch(/Zamboanga del Sur/);
+    expect(runAnalysis({ ...BASE, area: "xi", from: 2020 }).interpretation.caveats.join(" ")).not.toMatch(/Zamboanga del Sur/);
   });
 
   it("loses one pair per period of lag", () => {
-    expect(runAnalysis({ ...BASE, lag: 2 }).stats!.n).toBe(41);
+    expect(runAnalysis({ ...BASE, lag: 2 }).stats!.n).toBe(92);
     expect(runAnalysis(BASE).lagProfile).toHaveLength(5);
   });
 
@@ -88,14 +100,10 @@ describe("runAnalysis", () => {
     for (const p of PROVINCES) expect(runAnalysis({ ...BASE, area: p.id }).stats).not.toBeNull();
   });
 
-  it("flags landlocked provinces in the caveats", () => {
-    expect(runAnalysis({ ...BASE, area: "bukidnon" }).interpretation.caveats.join(" ")).toMatch(/no coastline/);
-  });
-
   it("exports the pairs as CSV", () => {
     const csv = analysisCsv(runAnalysis({ ...BASE, resolution: "annual", deseason: false }));
     expect(csv).toMatch(/^# dataset: Ocean-fisheries relationship/);
-    expect(csv.trim().split("\n").filter((l) => !l.startsWith("#"))).toHaveLength(11); // header + 10 years
+    expect(csv.trim().split("\n").filter((l) => !l.startsWith("#"))).toHaveLength(24); // header + 23 complete years
   });
 });
 
@@ -123,7 +131,7 @@ describe("summaries", () => {
   });
 
   it("fisheries: totals agree across breakdowns", () => {
-    const f = fisheriesSummary({ area: "ix", species: [], resolution: "annual", from: 2020, to: 2024 });
+    const f = fisheriesSummary({ area: "ix", species: [], resolution: "quarterly", from: 2010, to: 2024 });
     const byRank = f.ranking.reduce((a, r) => a + r.total, 0);
     const byProvince = f.provinces.reduce((a, r) => a + r.total, 0);
     expect(byRank).toBeCloseTo(f.total, 3);
@@ -132,10 +140,10 @@ describe("summaries", () => {
   });
 
   it("fisheries: a province is compared with its region's other provinces", () => {
-    const f = fisheriesSummary({ area: "sarangani", species: ["tambakol"], resolution: "quarterly", from: 2016, to: 2026 });
+    const f = fisheriesSummary({ area: "sarangani", species: ["tambakol"], resolution: "quarterly", from: 2003, to: 2026 });
     expect(f.provinces.map((p) => p.id)).toContain("south-cotabato");
     expect(f.provinces.find((p) => p.selected)!.id).toBe("sarangani");
-    expect(f.total).toBeCloseTo(areaYields("sarangani", "tambakol").reduce((a, p) => a + p.value, 0), 3);
+    expect(f.total).toBeCloseTo(areaYields("sarangani", "tambakol").reduce((a, p) => a + (p.value ?? 0), 0), 3);
   });
 
   it("regional: one row per province and region", () => {

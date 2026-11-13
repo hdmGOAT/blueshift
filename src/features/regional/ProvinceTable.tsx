@@ -40,9 +40,12 @@ export const ProvinceTable = memo(function ProvinceTable({ summary, layer, compa
       <span className="min-w-0 truncate text-ink">
         {r.name} {checkbox && <span className="text-ink-3">· {REGION_BY_ID[r.region as RegionId]?.short}</span>}
       </span>
-      <span className="text-ink-2">{r.coastal ? fmtVar(layer, r.envMean, false) : <span className="text-ink-3">inland</span>}</span>
-      <span style={{ color: r.coastal ? trendColor(worse(r.envPerDecade)) : undefined }}>{r.coastal ? signed(r.envPerDecade, v.digits) : "–"}</span>
-      <span className="text-ink-2">{fmt(r.yieldTotal)}</span>
+      <span className="text-ink-2">{fmtVar(layer, r.envMean, false)}</span>
+      <span style={{ color: trendColor(worse(r.envPerDecade)) }}>{signed(r.envPerDecade, v.digits)}</span>
+      <span className="text-ink-2" title={r.missing ? `${r.missing} quarters not recorded` : undefined}>
+        {fmt(r.yieldTotal)}
+        {r.missing > 0 && <span className="ml-1 text-[10.5px] text-ink-3">({r.missing} gaps)</span>}
+      </span>
       <span style={{ color: r.yieldChangePct === null ? undefined : trendColor(r.yieldChangePct) }}>{r.yieldChangePct === null ? "–" : `${signed(r.yieldChangePct, 1)}%`}</span>
       <span className={r.concern ? "text-warm" : "text-ink-3"}>{r.concern ? "Concern" : "–"}</span>
     </div>

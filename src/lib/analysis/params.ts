@@ -95,6 +95,7 @@ const variable = (q: URLSearchParams) => oneOf(q, "variable", ["sst", "chl"] as 
 
 export const parseOcean = (q: URLSearchParams) => wrap<OceanParams>(() => ({ ...base(q), variable: variable(q) }));
 export const parseFisheries = (q: URLSearchParams) => wrap<FisheriesParams>(() => ({ ...base(q), species: speciesList(q) }));
+export const parseYears = (q: URLSearchParams) => wrap<{ from: number; to: number }>(() => years(q));
 export const parseRegional = (q: URLSearchParams) => wrap<RegionalParams>(() => ({ ...years(q), variable: variable(q), species: speciesList(q) }));
 
 export const parseAnalysis = (q: URLSearchParams) =>

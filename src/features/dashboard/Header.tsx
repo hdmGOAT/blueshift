@@ -4,6 +4,7 @@
 // (methodology, download, panel toggles on the Overview).
 import { memo } from "react";
 import { BrandMark, PanelIcon } from "@/components/ui/icons";
+import { LAST_OBSERVED, quarterLabel } from "@/lib/data";
 import { VIEWS, type ViewId } from "./views";
 
 function PanelToggle({ side, open, onClick }: { side: "left" | "right"; open: boolean; onClick: () => void }) {
@@ -63,8 +64,8 @@ export const Header = memo(function Header({ view, onView, downloadHref, onMetho
 
       <div className="ml-auto flex items-center gap-2">
         <span className="label hidden 2xl:inline">Sources · NASA OB.DAAC · PSA</span>
-        <span className="label rounded-full bg-hi px-2.5 py-1 !text-ink-2" title="All numbers are generated sample data until the backend is connected">
-          Sample data
+        <span className="label hidden rounded-full bg-hi px-2.5 py-1 !text-ink-2 xl:inline" title="Observed quarters in the data file">
+          {quarterLabel(0)} – {quarterLabel(LAST_OBSERVED)}
         </span>
         <button onClick={onMethodology} className={ACTION}>
           Methodology

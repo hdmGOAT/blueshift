@@ -1,11 +1,14 @@
-// Correlation between landings and ocean conditions.
-// SAMPLE: computed in the browser here; the backend will supply these scores.
-import { HABITAT_SEASON, YIELDS } from "./landings";
+// Correlation between landings and ocean conditions, per scope and species,
+// for the Overview (bubble colours, correlation card, key finding).
+// Landings are seasonally adjusted (divided by each quarter-of-year's mean) and
+// de-trended, then correlated with the ocean anomalies, so the score reflects
+// ocean conditions rather than the seasons or long-term drift.
+// The Relationship Explorer runs its own, configurable analysis via /api/analysis.
+import { YIELDS } from "./landings";
 import { OCEAN } from "./ocean";
 import { SCOPES } from "./regions";
 import { SPECIES } from "./species";
-import { LAST_OBSERVED, QUARTERS } from "./time";
-import type { Corr, OceanPoint, Scope, Species, YieldPoint } from "./types";
+import type { Corr, OceanPoint, Scope, YieldPoint } from "./types";
 
 export function pearson(a: number[], b: number[]) {
   const n = a.length;
@@ -17,28 +20,26 @@ export function pearson(a: number[], b: number[]) {
     da += (a[i] - ma) ** 2;
     db += (b[i] - mb) ** 2;
   }
-  return num / Math.sqrt(da * db);
+  return da && db ? num / Math.sqrt(da * db) : 0;
 }
 
-// Uses observed quarters only, on seasonally adjusted and de-trended landings,
-// so the score reflects ocean conditions rather than season or long-term drift.
-function correlate(s: Species, ys: YieldPoint[], ocean: OceanPoint[]): Corr {
-  const obs = ys.slice(0, LAST_OBSERVED + 1);
-  const adj = obs.map((p) => p.value / HABITAT_SEASON[s.habitat][QUARTERS[p.index].q - 1]);
+function correlate(ys: YieldPoint[], ocean: OceanPoint[]): Corr {
+  const qMean = [0, 1, 2, 3].map((q) => {
+    const v = ys.filter((p) => p.index % 4 === q).map((p) => p.value);
+    return v.reduce((a, b) => a + b, 0) / v.length || 1;
+  });
+  const adj = ys.map((p) => p.value / qMean[p.index % 4]);
   const n = adj.length;
   const xm = (n - 1) / 2;
   const ym = adj.reduce((x, y) => x + y, 0) / n;
   const slope = adj.reduce((acc, y, i) => acc + (i - xm) * (y - ym), 0) / adj.reduce((acc, _, i) => acc + (i - xm) ** 2, 0);
   const resid = adj.map((y, i) => y - (ym + slope * (i - xm)));
-  return {
-    sst: pearson(resid, ocean.slice(0, n).map((o) => o.sstAnom)),
-    chl: pearson(resid, ocean.slice(0, n).map((o) => o.chlAnom)),
-  };
+  return { sst: pearson(resid, ocean.map((o) => o.sstAnom)), chl: pearson(resid, ocean.map((o) => o.chlAnom)) };
 }
 
 /** CORRELATION[scope][speciesId] */
 export const CORRELATION = Object.fromEntries(
-  SCOPES.map((sc) => [sc, Object.fromEntries(SPECIES.map((s) => [s.id, correlate(s, YIELDS[sc][s.id], OCEAN[sc])]))]),
+  SCOPES.map((sc) => [sc, Object.fromEntries(SPECIES.map((s) => [s.id, correlate(YIELDS[sc][s.id], OCEAN[sc])]))]),
 ) as Record<Scope, Record<string, Corr>>;
 
 /** Plain-language strength of a correlation, e.g. "Strong negative". */

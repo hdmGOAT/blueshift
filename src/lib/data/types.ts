@@ -6,11 +6,8 @@ export type Province = {
   id: string;
   name: string;
   region: RegionId;
-  /** False for landlocked provinces: their ocean values are their region's waters. */
-  coastal: boolean;
-  /** Sample-data generator inputs: relative size of marine and inland/pond fisheries. */
-  marine: number;
-  inland: number;
+  /** Approximate centre [lon, lat], for interpolating the ocean map. */
+  lonLat: [number, number];
 };
 
 /**
@@ -48,13 +45,9 @@ export type Species = {
   local: string;
   english: string;
   scientific: string;
+  /** Reporting category in the data file (PSA name). */
+  psa: string;
   habitat: Habitat;
-  /** Sample-data generator inputs. Not needed once real data is wired in. */
-  base: number; // tonnes per quarter, all Mindanao
-  shares: number[]; // share of catch by region, in REGIONS order
-  sstSens: number;
-  chlSens: number;
-  trend: number; // fractional change per year
 };
 
 export type Quarter = { index: number; year: number; q: number };
@@ -62,8 +55,10 @@ export type Quarter = { index: number; year: number; q: number };
 /** Ocean conditions for one quarter. `*Anom` is the departure from normal. */
 export type OceanPoint = { index: number; sst: number; sstAnom: number; chl: number; chlAnom: number };
 
-/** Landings for one quarter, in tonnes. */
+/** Landings for one quarter, in tonnes (a sum of recorded values). */
 export type YieldPoint = { index: number; value: number };
+/** One recorded landing for one quarter; null = not recorded (not zero). */
+export type ObsPoint = { index: number; value: number | null };
 
 /** Pearson r between landings and each ocean variable. */
 export type Corr = { sst: number; chl: number };

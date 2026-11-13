@@ -12,7 +12,7 @@ import { LineChart } from "@/features/charts/LineChart";
 import { FieldLegend } from "@/features/map/Legends";
 import { ProvinceMap } from "@/features/map/ProvinceMap";
 import type { OceanSummary } from "@/lib/analysis";
-import { areaProvinces, quarterLabel, quartersIn, type AreaId, type Layer } from "@/lib/data";
+import { areaProvinces, quarterLabel, quartersIn, yearCoverage, type AreaId, type Layer } from "@/lib/data";
 import { fieldColor } from "@/lib/field";
 import { signed } from "@/lib/format";
 import { VARIABLE, fmtVar } from "@/lib/units";
@@ -56,7 +56,7 @@ export function OceanMonitor({ query, area, setArea, layer, years }: Props) {
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
-            <Card title={`${v.name} by province`} sub={`Mean over ${years[0]}–${years[1]}; sea shows ${quarterLabel(lastQuarter)}. Click a province to select it.`}>
+            <Card title={`${v.name} by province`} sub={`Mean over ${years[0]}–${years[1]}; sea interpolated from province values, ${quarterLabel(lastQuarter)}. Click a province to select it; grey = no data.`}>
               <ProvinceMap
                 values={map}
                 color={(x) => fieldColor(layer, x)}
@@ -69,23 +69,23 @@ export function OceanMonitor({ query, area, setArea, layer, years }: Props) {
               />
             </Card>
             <div className="space-y-4">
-              <Card title={`${v.name} over time`} sub={`${o.areaName}. Dashed line: 2016–20 average.`}>
+              <Card title={`${v.name} over time`} sub={`${o.areaName}. Dashed line: ${o.baselineYears.from}–${o.baselineYears.to} average.`}>
                 <LineChart
                   labels={o.series.map((s) => s.label)}
                   series={[{ id: "v", name: v.name, color: v.color, values: o.series.map((s) => s.value) }]}
                   format={(x) => fmtVar(layer, x)}
-                  reference={{ value: o.baseline, label: "2016–20" }}
+                  reference={{ value: o.baseline, label: `${o.baselineYears.from}–${String(o.baselineYears.to).slice(2)}` }}
                   ariaLabel={`${v.long} over time in ${o.areaName}`}
                 />
               </Card>
-              <Card title="Year by year" sub={`Departure from the 2016–20 normal, ${v.unit}. Partial years are marked.`}>
+              <Card title="Year by year" sub={`Departure from the ${o.baselineYears.from}–${o.baselineYears.to} normal for the same quarters, ${v.unit}. Partial years are marked.`}>
                 <BarList
                   diverging
                   rows={o.years.map((y) => ({
                     id: String(y.year),
                     name: String(y.year),
                     value: y.anomaly,
-                    sub: y.partial ? "Q1–Q3 only" : undefined,
+                    sub: y.partial ? `${yearCoverage(y.year)} only` : undefined,
                     color: worrying(y.anomaly) ? "var(--warm)" : "var(--accent-text)",
                   }))}
                   format={(x) => signed(x, v.digits)}

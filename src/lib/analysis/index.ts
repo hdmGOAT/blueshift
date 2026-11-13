@@ -10,3 +10,4 @@ export type { FisheriesSummary, Place } from "./fisheries";
 export type { RegionalSummary, AreaRow } from "./regional";
 export { ENV_ALERT, DECLINE_PCT, SHARP_DECLINE_PCT } from "./regional";
 export type { Change } from "./trend";
+export type { Highlight, HighlightsResult } from "./highlights";

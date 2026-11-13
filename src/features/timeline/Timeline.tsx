@@ -67,11 +67,11 @@ export const Timeline = memo(function Timeline({ index, setIndex, playing, setPl
             if (e.key === "ArrowLeft") setIndex(Math.max(0, index - 1));
           }}
         >
-          <div className="absolute inset-0 flex gap-[2px] overflow-hidden rounded-md">
+          <div className="absolute inset-0 flex gap-px overflow-hidden rounded-md">
             {QUARTERS.map((q) => (
               <div
                 key={q.index}
-                className={`h-full flex-1 ${q.q === 1 && q.index > 0 ? "ml-[3px]" : ""}`}
+                className={`h-full flex-1 ${q.q === 1 && q.index > 0 ? "ml-[2px]" : ""}`}
                 style={{ background: colors[q.index], opacity: q.index > index ? 0.55 : 1 }}
               />
             ))}
@@ -83,7 +83,7 @@ export const Timeline = memo(function Timeline({ index, setIndex, playing, setPl
         </div>
         <div className="relative mt-1 h-4">
           {YEARS.map((yr, i) => (
-            <span key={yr} className={`absolute text-[10.5px] text-ink-3 ${yr % 2 ? "max-sm:hidden" : ""}`} style={{ left: pct(i * 4) }}>
+            <span key={yr} className={`absolute text-[10.5px] text-ink-3 ${(yr - YEARS[0]) % 2 ? "hidden" : (yr - YEARS[0]) % 4 ? "max-sm:hidden" : ""}`} style={{ left: pct(i * 4) }}>
               {yr}
             </span>
           ))}

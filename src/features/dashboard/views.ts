@@ -2,6 +2,7 @@
 // The filter bar, the Download button and the views all read from here, so the
 // downloaded CSV always matches the page.
 import { toQuery } from "@/lib/analysis";
+import { YEARS } from "@/lib/data";
 import type { DashboardState } from "./useDashboardState";
 
 export type ViewId = "overview" | "ocean" | "fisheries" | "explorer" | "regional";
@@ -33,7 +34,7 @@ export function viewQuery(view: ViewId, s: Pick<DashboardState, "area" | "years"
   const [from, to] = s.years;
   const base: Q = { area: s.area, from, to, resolution: s.resolution };
   const q: Record<ViewId, Q> = {
-    overview: { area: s.area, species: [s.selectedId], resolution: "quarterly", from: 2016, to: 2026 },
+    overview: { area: s.area, species: [s.selectedId], resolution: "quarterly", from: YEARS[0], to: YEARS[YEARS.length - 1] },
     ocean: { ...base, variable: s.layer },
     fisheries: { ...base, species: s.tracked },
     explorer: { ...base, species: s.selectedId, variable: s.layer, lag: s.lag, deseason: s.deseason, detrend: s.detrend },

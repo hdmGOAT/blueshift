@@ -20,7 +20,7 @@ export function toCsv(meta: Record<string, Cell>, header: string[], rows: Cell[]
   return [...head, header.join(","), ...rows.map((r) => r.map(cell).join(","))].join("\n") + "\n";
 }
 
-const SAMPLE = "SAMPLE DATA - generated, not PSA or NASA values";
+const SAMPLE = "Observed data: NASA MODIS-Aqua SST/chlorophyll-a, PSA landings (t). Blank = not recorded.";
 
 export function analysisCsv(a: AnalysisResult) {
   const p = a.params;
@@ -51,7 +51,7 @@ export function analysisCsv(a: AnalysisResult) {
 
 export function oceanCsv(o: OceanSummary) {
   return toCsv(
-    { dataset: "Ocean conditions", note: SAMPLE, area: o.areaName, variable: o.params.variable, unit: o.unit, resolution: o.params.resolution, baseline: "2016-2020" },
+    { dataset: "Ocean conditions", note: SAMPLE, area: o.areaName, variable: o.params.variable, unit: o.unit, resolution: o.params.resolution, baseline: `${o.baselineYears.from}-${o.baselineYears.to}` },
     ["period", "value", "anomaly_vs_baseline"],
     o.series.map((r) => [r.label, r.value, r.anomaly]),
   );
@@ -70,9 +70,9 @@ export function regionalCsv(r: RegionalSummary) {
   const p = r.params;
   return toCsv(
     { dataset: "Regional insights", note: SAMPLE, variable: p.variable, species: p.species.join(" ") || "all", years: `${p.from}-${p.to}` },
-    ["level", "id", "name", "region", "coastal", "env_mean", "env_change_per_decade", "landings_t", "landings_change_pct", "concern"],
+    ["level", "id", "name", "region", "env_mean", "env_change_per_decade", "landings_t", "landings_change_pct", "concern"],
     [...r.regions.map((x) => ["region", x] as const), ...r.provinces.map((x) => ["province", x] as const)].map(([level, x]) => [
-      level, x.id, x.name, x.region, x.coastal ? "yes" : "no", x.envMean, x.envPerDecade, x.yieldTotal, x.yieldChangePct, x.concern,
+      level, x.id, x.name, x.region, x.envMean, x.envPerDecade, x.yieldTotal, x.yieldChangePct, x.concern,
     ]),
   );
 }

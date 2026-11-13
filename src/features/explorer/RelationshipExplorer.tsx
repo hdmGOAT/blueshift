@@ -15,10 +15,11 @@ import { ExplorerOptions } from "./ExplorerOptions";
 import { InterpretationCard } from "./InterpretationCard";
 import { LagProfile } from "./LagProfile";
 import { ResultTiles } from "./ResultTiles";
+import { StrongestList } from "./StrongestList";
 
-type Props = React.ComponentProps<typeof ExplorerOptions> & { query: string };
+type Props = React.ComponentProps<typeof ExplorerOptions> & { query: string } & React.ComponentProps<typeof StrongestList>;
 
-export function RelationshipExplorer({ query, ...options }: Props) {
+export function RelationshipExplorer({ query, years, current, onPick, ...options }: Props) {
   const { data: a, loading, error } = useApi<AnalysisResult>("/api/analysis", query);
   const v = a ? VARIABLE[a.params.variable] : null;
   const unit = options.resolution === "quarterly" ? "quarters" : "years";
@@ -56,7 +57,7 @@ export function RelationshipExplorer({ query, ...options }: Props) {
 
       {a && charts && v && (
         <div className={`space-y-4 transition-opacity ${loading ? "opacity-60" : ""}`}>
-          <ResultTiles stats={a.stats} unit={unit} />
+          <ResultTiles stats={a.stats} unit={unit} missing={a.missing} />
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card title={`${v.long} trend`} sub={`${a.areaName}, ${v.unit}, mean per ${a.params.resolution === "quarterly" ? "quarter" : "year"}`}>
@@ -86,6 +87,7 @@ export function RelationshipExplorer({ query, ...options }: Props) {
               <Card title="Lagged relationships" sub={`Pearson r when ${v.name} leads landings. * p < 0.05`}>
                 <LagProfile rows={a.lagProfile} current={a.params.lag} unit={options.resolution === "quarterly" ? "qtr" : "yr"} onPick={options.setLag} />
               </Card>
+              <StrongestList years={years} current={current} onPick={onPick} />
             </div>
           </div>
         </div>

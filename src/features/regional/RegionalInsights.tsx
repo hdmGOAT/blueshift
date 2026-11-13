@@ -34,16 +34,19 @@ export function RegionalInsights({ query, layer, years, tracked }: Props) {
 
   const map = useMemo(() => {
     if (!r) return null;
-    // Normalise so the diverging colour scale reads coral = worse, cerulean = better.
-    const alert = Math.abs(ENV_ALERT[layer]) * 3;
+    // Diverging scale (coral = direction of concern, cerulean = the other way),
+    // stretched to the largest change actually present so provinces stay distinguishable.
+    const maxAbs = (vs: (number | null)[]) => Math.max(1e-9, ...vs.map((x) => Math.abs(x ?? 0)));
+    const envMax = Math.max(Math.abs(ENV_ALERT[layer]), maxAbs(r.provinces.map((p) => p.envPerDecade)));
+    const yieldMax = Math.max(10, maxAbs(r.provinces.map((p) => p.yieldChangePct)));
     const value = (p: RegionalSummary["provinces"][number]) =>
-      metric === "envMean" ? (p.coastal ? p.envMean : null) : metric === "envChange" ? (p.coastal ? p.envPerDecade : null) : p.yieldChangePct;
+      metric === "envMean" ? p.envMean : metric === "envChange" ? p.envPerDecade : p.yieldChangePct;
     const color =
       metric === "envMean"
         ? (x: number) => fieldColor(layer, x)
         : metric === "envChange"
-          ? (x: number) => corrColor(((layer === "sst" ? -x : x) / alert) * 0.9)
-          : (x: number) => corrColor((x / 30) * 0.9);
+          ? (x: number) => corrColor(((layer === "sst" ? -x : x) / envMax) * 0.9)
+          : (x: number) => corrColor((x / yieldMax) * 0.9);
     const format = (x: number) => (metric === "yieldChange" ? `${signed(x, 1)}% landings` : metric === "envChange" ? `${signed(x, v.digits)} ${v.unit}/decade` : fmtVar(layer, x));
     return { values: Object.fromEntries(r.provinces.map((p) => [p.id, value(p)])), color, format };
   }, [r, metric, layer, v]);
@@ -75,7 +78,7 @@ export function RegionalInsights({ query, layer, years, tracked }: Props) {
               <CompareCharts summary={r} ids={compare} layer={layer} />
             </div>
           </div>
-          <Card title="Province and region summaries" sub={`Ocean values are means over coastal waters; changes are fitted, seasonally adjusted trends. Tick up to ${MAX_COMPARE} provinces to compare.`}>
+          <Card title="Province and region summaries" sub={`Ocean values are province means; changes are fitted, seasonally adjusted trends. Landings are recorded values only (gaps noted). Grey provinces on the map have no data. Tick up to ${MAX_COMPARE} provinces to compare.`}>
             <ProvinceTable summary={r} layer={layer} compare={compare} onToggle={toggleCompare} />
           </Card>
         </div>

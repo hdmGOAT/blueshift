@@ -5,7 +5,7 @@
 import { useMemo } from "react";
 import { scaleLinear } from "d3-scale";
 import { area, curveMonotoneX, line } from "d3-shape";
-import { LAST_OBSERVED, OCEAN, YIELDS, type Layer, type Scope, type Species, type YieldPoint } from "@/lib/data";
+import { LAST_OBSERVED, OCEAN, START_YEAR, YEARS, YIELDS, type Layer, type Scope, type Species, type YieldPoint } from "@/lib/data";
 
 // Layout in viewBox units.
 const W = 300;
@@ -15,7 +15,8 @@ const GAP = 14;
 const LEFT = 30;
 const RIGHT = 6;
 const H = PLOT_H + GAP + STRIP_H + 18;
-const YEAR_TICKS = [2016, 2019, 2022, 2025];
+/** A year label every six years from the start. */
+const YEAR_TICKS = YEARS.filter((y) => (y - START_YEAR) % 6 === 1);
 
 type Props = { species: Species; scope: Scope; index: number; layer: Layer };
 
@@ -88,7 +89,7 @@ export function TrendChart({ species, scope, index, layer }: Props) {
       <circle cx={x(index)} cy={y(data[index].value)} r={3.2} fill="var(--white)" />
 
       {YEAR_TICKS.map((yr) => (
-        <text key={yr} x={x((yr - 2016) * 4)} y={H - 3} fontSize={9.5} fill="var(--ink-3)">
+        <text key={yr} x={x((yr - START_YEAR) * 4)} y={H - 3} fontSize={9.5} fill="var(--ink-3)">
           {yr}
         </text>
       ))}

@@ -1,28 +1,27 @@
 // Ocean Monitor summary for one area and variable over a year range.
 // Served by /api/ocean.
-import { PROVINCES, areaName, quartersIn, areaOcean, type Layer } from "@/lib/data";
+import { BASELINE, PROVINCES, areaName, quartersIn, areaOcean, type Layer } from "@/lib/data";
 import type { OceanParams } from "./params";
 import { envSeries, periods, perYear, seasonallyAdjusted } from "./series";
 import { mean } from "./stats";
 import { fittedChange, type Change } from "./trend";
 
-/** The fixed reference period anomalies are measured against. */
-export const BASELINE = { from: 2016, to: 2020 } as const;
-
 export type OceanSummary = {
   params: OceanParams;
   areaName: string;
   unit: string;
-  /** One row per period. `anomaly` is the departure from the 2016-20 mean for that quarter (or year). */
+  /** One row per period. `anomaly` is the departure from the BASELINE mean for that quarter (or year). */
   series: { label: string; value: number; anomaly: number }[];
   stats: { mean: number; min: number; max: number; minLabel: string; maxLabel: string; n: number };
   baseline: number;
+  /** The years `baseline` averages over. */
+  baselineYears: { from: number; to: number };
   /** Seasonally adjusted trend over the range. */
   change: Change;
   /** Annual mean anomaly per year in range, for comparing years. */
   years: { year: number; anomaly: number; partial: boolean }[];
   /** Mean over the range for every province, for the map. */
-  provinces: { id: string; value: number; coastal: boolean }[];
+  provinces: { id: string; value: number }[];
 };
 
 export const UNIT: Record<Layer, string> = { sst: "°C", chl: "mg/m³" };
@@ -64,8 +63,9 @@ export function oceanSummary(params: OceanParams): OceanSummary {
     series,
     stats: { mean: mean(values), min: values[minI], max: values[maxI], minLabel: per[minI].label, maxLabel: per[maxI].label, n: values.length },
     baseline,
+    baselineYears: BASELINE,
     change: fittedChange(seasonallyAdjusted(values, per), perYear(resolution)),
     years,
-    provinces: PROVINCES.map((p) => ({ id: p.id, coastal: p.coastal, value: mean(rangeQ.map((i) => areaOcean(p.id)[i][variable])) })),
+    provinces: PROVINCES.map((p) => ({ id: p.id, value: mean(rangeQ.map((i) => areaOcean(p.id)[i][variable])) })),
   };
 }

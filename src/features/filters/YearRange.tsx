@@ -1,15 +1,15 @@
 "use client";
 
-import { YEARS } from "@/lib/data";
+import { YEARS, yearCoverage } from "@/lib/data";
 import { Field, SELECT } from "./Field";
 
-/** Year range filter: two selects, inclusive. 2026 has Q1-Q3 only. */
+/** Year range filter: two selects, inclusive. Partial years show which quarters they have. */
 export function YearRange({ years, onYears }: { years: [number, number]; onYears: (y: [number, number]) => void }) {
   const opts = (min: number, max: number) =>
     YEARS.filter((y) => y >= min && y <= max).map((y) => (
       <option key={y} value={y}>
         {y}
-        {y === YEARS[YEARS.length - 1] ? " (Q1–Q3)" : ""}
+        {yearCoverage(y) && ` (${yearCoverage(y)})`}
       </option>
     ));
   return (

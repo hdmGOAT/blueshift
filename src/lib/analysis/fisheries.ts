@@ -2,7 +2,7 @@
 // year range, with rankings and comparisons. Served by /api/fisheries.
 import { REGIONS, SPECIES, SPECIES_BY_ID, areaName, areaProvinces, isProvince, PROVINCE_BY_ID, provincesOf, type Habitat } from "@/lib/data";
 import type { FisheriesParams } from "./params";
-import { periods, perYear, seasonallyAdjusted, yieldSeries } from "./series";
+import { countMissing, periods, perYear, seasonallyAdjusted, sumRecorded, yieldSeries } from "./series";
 import { fittedChange, type Change } from "./trend";
 
 /** Most species drawn as separate lines in the trend chart. */
@@ -15,10 +15,13 @@ export type FisheriesSummary = {
   areaName: string;
   /** Species included (all when none were chosen). */
   speciesIds: string[];
+  /** Sum of recorded landings. */
   total: number;
+  /** Periods with nothing recorded for the selection. */
+  missing: number;
   change: Change;
   /** Total per period, plus a line per species when up to MAX_LINES are chosen. */
-  series: { label: string; total: number; bySpecies: Record<string, number> }[];
+  series: { label: string; total: number | null; bySpecies: Record<string, number | null> }[];
   /** Every species in the area over the range, largest first. */
   ranking: { id: string; name: string; english: string; total: number; share: number; changePct: number | null }[];
   /** Provinces compared: those in the area, or a province's neighbours in its region. */
@@ -32,7 +35,7 @@ export type FisheriesSummary = {
 const sum = (a: number[]) => a.reduce((x, y) => x + y, 0);
 
 function places(items: { id: string; name: string }[], species: string[], per: ReturnType<typeof periods>, selected: string) {
-  const totals = items.map((it) => sum(yieldSeries(it.id, species, per)));
+  const totals = items.map((it) => sumRecorded(yieldSeries(it.id, species, per)));
   const all = sum(totals) || 1;
   return items.map((it, i) => ({ ...it, total: totals[i], share: totals[i] / all, selected: it.id === selected })).sort((a, b) => b.total - a.total);
 }
@@ -47,7 +50,7 @@ export function fisheriesSummary(params: FisheriesParams): FisheriesSummary {
 
   const ranking = SPECIES.map((s) => {
     const ys = yieldSeries(area, [s.id], per);
-    return { id: s.id, name: s.local, english: s.english, total: sum(ys), changePct: fittedChange(seasonallyAdjusted(ys, per), perYear(resolution)).pct };
+    return { id: s.id, name: s.local, english: s.english, total: sumRecorded(ys), changePct: fittedChange(seasonallyAdjusted(ys, per), perYear(resolution)).pct };
   });
   const rankTotal = sum(ranking.map((r) => r.total)) || 1;
 
@@ -61,7 +64,8 @@ export function fisheriesSummary(params: FisheriesParams): FisheriesSummary {
     params,
     areaName: areaName(area),
     speciesIds: ids,
-    total: sum(totals),
+    total: sumRecorded(totals),
+    missing: countMissing(totals),
     change: fittedChange(seasonallyAdjusted(totals, per), perYear(resolution)),
     series: per.map((p, i) => ({ label: p.label, total: totals[i], bySpecies: Object.fromEntries(lines.map((id) => [id, lineSeries[id][i]])) })),
     ranking: ranking.map((r) => ({ ...r, share: r.total / rankTotal })).sort((a, b) => b.total - a.total),

@@ -48,7 +48,7 @@ export function FisheriesTracker({ query, setArea, tracked, setTracked }: Props)
       {f && (
         <div className={`space-y-4 transition-opacity ${loading ? "opacity-60" : ""}`}>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <StatTile label="Total yield" value={`${fmt(f.total)} t`} sub={`${f.params.from}–${f.params.to} · ${selection}`} />
+            <StatTile label="Total yield" value={`${fmt(f.total)} t`} sub={`Recorded, ${f.params.from}–${f.params.to} · ${selection}${f.missing ? ` · ${f.missing} ${per}s not recorded` : ""}`} />
             <StatTile label="Change over period" value={pct(f.change.pct)} tone={f.change.pct === null ? undefined : trendColor(f.change.pct)} sub="Fitted trend, seasonally adjusted" />
             <StatTile label={`Average per ${per}`} value={`${fmt(f.total / Math.max(1, f.series.length))} t`} sub={`${f.series.length} ${per}s`} />
             <StatTile label="Top producer" value={f.provinces[0]?.name ?? "–"} sub={f.provinces[0] ? `${(f.provinces[0].share * 100).toFixed(0)}% of compared provinces` : undefined} />

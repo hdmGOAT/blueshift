@@ -2,10 +2,7 @@
 
 import { Segmented } from "@/components/ui/Segmented";
 import { FieldLegend } from "@/features/map/Legends";
-import { OCEAN, oceanMean, regionName, type Layer, type Scope } from "@/lib/data";
-
-/** Quarters that make up the "normal" baseline (2016 to 2020). */
-const BASELINE = [0, 20] as const;
+import { BASELINE, OCEAN, regionName, type Layer, type Scope } from "@/lib/data";
 
 type Props = { layer: Layer; setLayer: (l: Layer) => void; scope: Scope; index: number };
 
@@ -13,7 +10,8 @@ type Props = { layer: Layer; setLayer: (l: Layer) => void; scope: Scope; index: 
 export function OceanReadout({ layer, setLayer, scope, index }: Props) {
   const point = OCEAN[scope][index];
   const sst = layer === "sst";
-  const delta = (sst ? point.sstAnom : point.chlAnom) - oceanMean(scope, sst ? "sstAnom" : "chlAnom", ...BASELINE);
+  // Anomalies are already departures from the same quarter's baseline mean.
+  const delta = sst ? point.sstAnom : point.chlAnom;
   // Warmer water and lower chlorophyll are the worrying directions.
   const worrying = sst ? delta > 0 : delta < 0;
   return (
@@ -29,7 +27,7 @@ export function OceanReadout({ layer, setLayer, scope, index }: Props) {
             {delta >= 0 ? "+" : "−"}
             {Math.abs(delta).toFixed(sst ? 2 : 3)}
           </span>{" "}
-          vs 2016–20 · {regionName(scope)}
+          vs {BASELINE.from}–{String(BASELINE.to).slice(2)} normal · {regionName(scope)}
         </div>
       </div>
       <FieldLegend layer={layer} />

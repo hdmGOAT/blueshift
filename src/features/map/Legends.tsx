@@ -6,7 +6,10 @@ import { CHL_DOMAIN, CHL_GRADIENT, SST_DOMAIN, SST_GRADIENT } from "@/lib/field"
 /** Colour ramp for the ocean layer. */
 export const FieldLegend = memo(function FieldLegend({ layer }: { layer: Layer }) {
   const stops = layer === "sst" ? SST_GRADIENT : CHL_GRADIENT;
-  const ticks = layer === "sst" ? [`${SST_DOMAIN[0]}°`, "29.2°", `${SST_DOMAIN[1]}°`] : [`${CHL_DOMAIN[0]}`, "0.25", `${CHL_DOMAIN[1]} mg/m³`];
+  const ticks =
+    layer === "sst"
+      ? [`${SST_DOMAIN[0]}°`, `${((SST_DOMAIN[0] + SST_DOMAIN[1]) / 2).toFixed(1)}°`, `${SST_DOMAIN[1]}°`]
+      : [`${CHL_DOMAIN[0]}`, Math.sqrt(CHL_DOMAIN[0] * CHL_DOMAIN[1]).toFixed(2), `${CHL_DOMAIN[1]} mg/m³`];
   return (
     <div className="w-[180px]">
       <div className="h-1.5 rounded-full" style={{ background: `linear-gradient(90deg, ${stops.join(",")})` }} />

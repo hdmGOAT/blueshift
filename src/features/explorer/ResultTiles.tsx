@@ -6,7 +6,7 @@ import { corrTextColor, signed } from "@/lib/format";
 const dash = "—";
 
 /** The four headline numbers: Pearson, Spearman, p-value, observations. */
-export function ResultTiles({ stats, unit }: { stats: Stats | null; unit: string }) {
+export function ResultTiles({ stats, unit, missing }: { stats: Stats | null; unit: string; missing: number }) {
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <StatTile label="Pearson r" value={stats ? signed(stats.pearson) : dash} tone={stats ? corrTextColor(stats.pearson) : undefined} sub={stats ? `${strengthLabel(stats.pearson)} · linear` : "Awaiting analysis"} />
@@ -16,7 +16,7 @@ export function ResultTiles({ stats, unit }: { stats: Stats | null; unit: string
         value={stats ? fmtP(stats.pPearson).replace("p ", "").replace("= ", "") : dash}
         sub={stats ? (stats.pPearson < 0.05 ? "Significant at 5%" : "Not significant at 5%") + ` · Spearman ${fmtP(stats.pSpearman)}` : "Two-sided t-test"}
       />
-      <StatTile label="Observations" value={stats ? stats.n : dash} sub={stats ? `paired ${unit} · R² ${(stats.r2 * 100).toFixed(0)}%` : "Paired periods"} />
+      <StatTile label="Observations" value={stats ? stats.n : dash} sub={stats ? `paired ${unit} · R² ${(stats.r2 * 100).toFixed(0)}%${missing ? ` · ${missing} not recorded` : ""}` : "Paired periods"} />
     </div>
   );
 }

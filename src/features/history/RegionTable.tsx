@@ -1,13 +1,13 @@
 "use client";
 
 import { memo } from "react";
-import { CORRELATION, REGIONS, annualTotal, type Scope, type Species } from "@/lib/data";
+import { COMPLETE_YEARS, CORRELATION, LAST_COMPLETE_YEAR, REGIONS, annualTotal, type Scope, type Species } from "@/lib/data";
 import { corrTextColor, fmt, signed, trendColor } from "@/lib/format";
 
-const YEAR = 2025;
-const BASE_YEAR = 2016;
+const YEAR = LAST_COMPLETE_YEAR;
+const BASE_YEAR = COMPLETE_YEARS[0];
 
-/** One row per region: landings, change since 2016, and correlation with SST. Click to switch scope. */
+/** One row per region: landings, change since the first complete year, and correlation with SST. Click to switch scope. */
 export const RegionTable = memo(function RegionTable({ species, scope, onScope }: { species: Species; scope: Scope; onScope: (s: Scope) => void }) {
   return (
     <>
@@ -17,7 +17,7 @@ export const RegionTable = memo(function RegionTable({ species, scope, onScope }
           <tr className="text-left text-[11px] text-ink-3">
             <th className="pb-1.5 font-normal">Region</th>
             <th className="pb-1.5 text-right font-normal">t</th>
-            <th className="pb-1.5 text-right font-normal">vs &apos;16</th>
+            <th className="pb-1.5 text-right font-normal">vs &apos;{String(BASE_YEAR).slice(2)}</th>
             <th className="pb-1.5 text-right font-normal">r SST</th>
           </tr>
         </thead>
@@ -25,7 +25,7 @@ export const RegionTable = memo(function RegionTable({ species, scope, onScope }
           {REGIONS.map((r) => {
             const now = annualTotal(r.id, species.id, YEAR);
             const base = annualTotal(r.id, species.id, BASE_YEAR);
-            const change = ((now - base) / base) * 100;
+            const change = base ? ((now - base) / base) * 100 : 0;
             const corr = CORRELATION[r.id][species.id].sst;
             return (
               <tr key={r.id} onClick={() => onScope(r.id)} className={`cursor-pointer border-t border-line ${scope === r.id ? "bg-hi" : "hover:bg-hi/60"}`}>

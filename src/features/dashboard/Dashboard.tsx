@@ -12,6 +12,7 @@ import { FisheriesTracker } from "@/features/fisheries/FisheriesTracker";
 import { OceanMonitor } from "@/features/ocean/OceanMonitor";
 import { OverviewView } from "@/features/overview/OverviewView";
 import { RegionalInsights } from "@/features/regional/RegionalInsights";
+import type { Highlight } from "@/lib/analysis";
 import { Header } from "./Header";
 import { useDashboardState } from "./useDashboardState";
 import { usePanels } from "./usePanels";
@@ -21,8 +22,8 @@ import { VIEW_BY_ID, viewQuery } from "./views";
 const HistoryModal = dynamic(() => import("@/features/history/HistoryModal"), { ssr: false });
 const MethodologyModal = dynamic(() => import("@/features/methodology/MethodologyModal"), { ssr: false });
 
-export function Dashboard() {
-  const s = useDashboardState();
+export function Dashboard({ start }: { start?: Highlight | null }) {
+  const s = useDashboardState(start);
   const [modal, setModal] = useState<"history" | "methodology" | null>(null);
   const openHistory = useCallback(() => setModal("history"), []);
   const openMethodology = useCallback(() => setModal("methodology"), []);
@@ -56,6 +57,9 @@ export function Dashboard() {
               setDeseason={s.setDeseason}
               detrend={s.detrend}
               setDetrend={s.setDetrend}
+              years={s.years}
+              current={{ species: s.selectedId, area: s.area, variable: s.layer, lag: s.lag }}
+              onPick={s.applyHighlight}
             />
           )}
           {s.view === "regional" && <RegionalInsights query={query} layer={s.layer} years={s.years} tracked={s.tracked} />}

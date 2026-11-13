@@ -47,11 +47,14 @@ export function linreg(x: number[], y: number[]) {
   return { slope, intercept: my - slope * mx };
 }
 
-/** Residuals of y after removing a straight-line trend over its index. */
-export function detrend(y: number[]) {
-  const x = y.map((_, i) => i);
-  const { slope, intercept } = linreg(x, y);
-  return y.map((v, i) => v - (intercept + slope * i));
+/** Residuals of y after removing a straight-line trend over its index. Nulls stay null. */
+export function detrend<T extends number | null>(y: T[]): T[] {
+  const xs: number[] = [];
+  const ys: number[] = [];
+  y.forEach((v, i) => v !== null && (xs.push(i), ys.push(v)));
+  if (xs.length < 2) return y;
+  const { slope, intercept } = linreg(xs, ys);
+  return y.map((v, i) => (v === null ? v : ((v as number) - (intercept + slope * i)) as T));
 }
 
 // ---- Significance --------------------------------------------------------------

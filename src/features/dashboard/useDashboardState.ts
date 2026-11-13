@@ -4,7 +4,7 @@
 // action functions returned here; they do not own shared state themselves.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FilterMode } from "@/features/species/SpeciesFilter";
-import { MAX_LAG, type Resolution } from "@/lib/analysis";
+import { MAX_LAG, type Highlight, type Resolution } from "@/lib/analysis";
 import { COMPLETE_YEARS, LAST_OBSERVED, QUARTERS, SPECIES, SPECIES_BY_ID, YEARS, areaScope, topSpecies, type AreaId, type Layer, type Scope } from "@/lib/data";
 import { VIEWS, type ViewId } from "./views";
 
@@ -16,29 +16,34 @@ const viewFromHash = (): ViewId => {
   return VIEWS.some((v) => v.id === h) ? (h as ViewId) : "overview";
 };
 
-export function useDashboardState() {
+/**
+ * `start` is the strongest relationship in the data (computed on the server,
+ * see app/page.tsx): the app opens on it. Without it, Galunggong in all Mindanao.
+ */
+export function useDashboardState(start?: Highlight | null) {
+  const init = start?.params;
   /** Which page is showing; mirrored in the URL hash so it can be linked. */
   const [view, setViewRaw] = useState<ViewId>(viewFromHash);
   /** Ocean variable (SST or chlorophyll-a), shared by the map and every view. */
-  const [layer, setLayer] = useState<Layer>("sst");
+  const [layer, setLayer] = useState<Layer>(init?.variable ?? "sst");
   /** Quarter index shown on the Overview map. */
   const [index, setIndex] = useState(LAST_OBSERVED);
   const [playing, setPlaying] = useState(false);
-  const [selectedId, setSelectedId] = useState(DEFAULT_SPECIES);
+  const [selectedId, setSelectedId] = useState(init?.species ?? DEFAULT_SPECIES);
   /** Geographic filter: "all", a region id or a province id. */
-  const [area, setArea] = useState<AreaId>("all");
+  const [area, setArea] = useState<AreaId>(init?.area ?? "all");
   /** Year range filter, inclusive. */
   const [years, setYearsRaw] = useState<[number, number]>([YEARS[0], YEARS[YEARS.length - 1]]);
   const [resolution, setResolutionRaw] = useState<Resolution>("quarterly");
   /** Species filter for views that take several (empty = all species). */
   const [tracked, setTracked] = useState<string[]>([]);
   /** Relationship Explorer options. */
-  const [lag, setLag] = useState(0);
+  const [lag, setLag] = useState(init?.lag ?? 0);
   const [deseason, setDeseason] = useState(true);
   const [detrend, setDetrend] = useState(false);
   /** Overview: species shown as bubbles on the map. */
   const [mode, setModeRaw] = useState<FilterMode>("top");
-  const [checked, setChecked] = useState(() => new Set(topSpecies("all")));
+  const [checked, setChecked] = useState(() => new Set([...topSpecies(areaScope(init?.area ?? "all")), init?.species ?? DEFAULT_SPECIES]));
 
   /** The region-level scope the Overview map shows for the current area. */
   const scope = areaScope(area);
@@ -116,6 +121,20 @@ export function useDashboardState() {
     [years],
   );
 
+  /** Load a highlighted relationship into the Explorer (keeps the year range). */
+  const applyHighlight = useCallback(
+    (h: Highlight) => {
+      select(h.params.species);
+      changeArea(h.params.area);
+      setLayer(h.params.variable);
+      setResolutionRaw("quarterly");
+      setLag(h.params.lag);
+      setDeseason(h.params.deseason);
+      setDetrend(h.params.detrend);
+    },
+    [select, changeArea],
+  );
+
   const visible = useMemo(() => SPECIES.filter((s) => checked.has(s.id)), [checked]);
 
   return {
@@ -137,6 +156,7 @@ export function useDashboardState() {
     selectedId,
     selected: SPECIES_BY_ID[selectedId],
     select,
+    applyHighlight,
   };
 }
 

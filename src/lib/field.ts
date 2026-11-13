@@ -1,54 +1,47 @@
 // The coloured ocean layer on the map.
-// SAMPLE: a synthetic gridded field standing in for NASA MODIS-Aqua L3 tiles.
-// With real data, replace sstAt/chlAt with lookups into the fetched grid.
+// The data file has one SST / chlorophyll-a value per province and quarter,
+// not a satellite grid, so the sea between provinces is an inverse-distance
+// weighted interpolation of the province values: a smooth picture of the
+// observed numbers, not extra measurements. Swap in a real grid (e.g. NASA
+// MODIS-Aqua L3 tiles) by replacing valueAt().
 //
-// Performance: colours come from a 256-step lookup table, and each rendered
-// frame (layer + quarter) is cached, so replaying the timeline costs nothing.
-import { OCEAN, type Layer } from "./data";
+// Performance: weights are computed once per pixel, colours come from a
+// 256-step lookup table, and each rendered frame (layer + quarter) is cached.
+import { PROVINCES, PROVINCE_OCEAN, type Layer } from "./data";
 
 export const FIELD_BOUNDS = { west: 118.4, east: 128.2, south: 3.6, north: 11.4 };
 const FIELD_STEP = 0.1; // degrees per pixel
+const COLS = Math.round((FIELD_BOUNDS.east - FIELD_BOUNDS.west) / FIELD_STEP);
+const ROWS = Math.round((FIELD_BOUNDS.north - FIELD_BOUNDS.south) / FIELD_STEP);
+/** Distance (degrees) added to every weight so values blend smoothly near a province centre. */
+const SMOOTH = 0.35;
 
-const blob = (lon: number, lat: number, cx: number, cy: number, s: number) =>
-  Math.exp(-((lon - cx) ** 2 + (lat - cy) ** 2) / (2 * s * s));
-
-/** Sea-surface temperature (°C) at a point for one quarter. */
-export function sstAt(lon: number, lat: number, index: number) {
-  const o = OCEAN.all[index];
-  const q = (index % 4) + 1;
-  let v = o.sst;
-  v += 0.35 * blob(lon, lat, 121, 8.2, 1.4); // warm, enclosed Sulu Sea
-  v += 0.18 * blob(lon, lat, 123.5, 5.0, 1.6); // Celebes Sea
-  v -= 0.25 * Math.max(0, (lon - 126.2) / 2); // Pacific-facing coast
-  v -= 0.45 * blob(lon, lat, 122.6, 8.9, 0.55); // Zamboanga upwelling
-  v -= 0.2 * blob(lon, lat, 124.4, 9.4, 0.7); // Bohol Sea
-  if (q === 1) v -= 0.12 * (lat - 7);
-  if (q === 3) v += 0.08 * (lat - 7);
-  v += 0.06 * Math.sin(lon * 2.3 + index * 0.4) * Math.cos(lat * 1.9);
-  return v;
+/** Inverse-distance weights (power 2) from one point to every province, normalised. */
+function weights(lon: number, lat: number) {
+  const w = PROVINCES.map((p) => 1 / ((p.lonLat[0] - lon) ** 2 + (p.lonLat[1] - lat) ** 2 + SMOOTH ** 2));
+  const sum = w.reduce((a, b) => a + b, 0);
+  return w.map((x) => x / sum);
 }
 
-/** Chlorophyll-a (mg/m³) at a point for one quarter. */
-export function chlAt(lon: number, lat: number, index: number) {
-  const o = OCEAN.all[index];
-  let v = o.chl * 0.55;
-  const q = (index % 4) + 1;
-  const up = q === 1 || q === 4 ? 1.25 : 0.8;
-  v += 0.55 * up * blob(lon, lat, 122.6, 8.8, 0.45);
-  v += 0.32 * blob(lon, lat, 125.65, 6.85, 0.35);
-  v += 0.28 * blob(lon, lat, 123.95, 8.3, 0.3);
-  v += 0.2 * blob(lon, lat, 125.4, 9.1, 0.3);
-  v += 0.16 * blob(lon, lat, 124.0, 6.9, 0.5);
-  v += 0.12 * blob(lon, lat, 122.0, 6.9, 0.5);
-  v -= 0.04 * Math.max(0, lon - 126.4);
-  v *= 1 + 0.12 * Math.sin(lon * 3.1 - index * 0.3) * Math.cos(lat * 2.7);
-  return Math.max(0.05, v);
+let pixelWeights: Float32Array | null = null;
+function getPixelWeights() {
+  if (pixelWeights) return pixelWeights;
+  const n = PROVINCES.length;
+  pixelWeights = new Float32Array(COLS * ROWS * n);
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++) pixelWeights.set(weights(FIELD_BOUNDS.west + (c + 0.5) * FIELD_STEP, FIELD_BOUNDS.north - (r + 0.5) * FIELD_STEP), (r * COLS + c) * n);
+  return pixelWeights;
+}
+
+/** Interpolated value at a point for one quarter (used by tests and tooltips). */
+export function valueAt(layer: Layer, lon: number, lat: number, index: number) {
+  return weights(lon, lat).reduce((a, w, i) => a + w * PROVINCE_OCEAN[PROVINCES[i].id][index][layer], 0);
 }
 
 // ---- Colour ramps ----------------------------------------------------------
 
-export const SST_DOMAIN = [27.8, 30.6] as const; // °C, linear
-export const CHL_DOMAIN = [0.06, 1.0] as const; // mg/m³, log
+export const SST_DOMAIN = [27.5, 31.0] as const; // °C, linear
+export const CHL_DOMAIN = [0.1, 3.0] as const; // mg/m³, log
 
 export const SST_GRADIENT = ["#034078", "#1282a2", "#7cc6d6", "#ebe6d6", "#eba571", "#d4583a", "#8e2a1c"];
 export const CHL_GRADIENT = ["#0c3a5e", "#11607a", "#1f8a7a", "#5fae5f", "#b9d46c", "#f1e9a6"];
@@ -93,27 +86,24 @@ export function renderField(layer: Layer, index: number): string {
   const hit = frameCache.get(key);
   if (hit) return hit;
 
-  const { west, east, south, north } = FIELD_BOUNDS;
-  const cols = Math.round((east - west) / FIELD_STEP);
-  const rows = Math.round((north - south) / FIELD_STEP);
+  const n = PROVINCES.length;
+  const vals = PROVINCES.map((p) => PROVINCE_OCEAN[p.id][index][layer]);
+  const w = getPixelWeights();
   const canvas = document.createElement("canvas");
-  canvas.width = cols;
-  canvas.height = rows;
+  canvas.width = COLS;
+  canvas.height = ROWS;
   const ctx = canvas.getContext("2d")!;
-  const img = ctx.createImageData(cols, rows);
+  const img = ctx.createImageData(COLS, ROWS);
   const lut = layer === "sst" ? SST_LUT : CHL_LUT;
-  for (let r = 0; r < rows; r++) {
-    const lat = north - (r + 0.5) * FIELD_STEP;
-    for (let c = 0; c < cols; c++) {
-      const lon = west + (c + 0.5) * FIELD_STEP;
-      const t = layer === "sst" ? sstT(sstAt(lon, lat, index)) : chlT(chlAt(lon, lat, index));
-      const j = Math.round(t * 255) * 3;
-      const k = (r * cols + c) * 4;
-      img.data[k] = lut[j];
-      img.data[k + 1] = lut[j + 1];
-      img.data[k + 2] = lut[j + 2];
-      img.data[k + 3] = 255;
-    }
+  for (let px = 0; px < COLS * ROWS; px++) {
+    let v = 0;
+    for (let i = 0, o = px * n; i < n; i++) v += w[o + i] * vals[i];
+    const j = Math.round((layer === "sst" ? sstT(v) : chlT(v)) * 255) * 3;
+    const k = px * 4;
+    img.data[k] = lut[j];
+    img.data[k + 1] = lut[j + 1];
+    img.data[k + 2] = lut[j + 2];
+    img.data[k + 3] = 255;
   }
   ctx.putImageData(img, 0, 0);
   const url = canvas.toDataURL();

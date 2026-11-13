@@ -1,6 +1,7 @@
 "use client";
 
 import { memo } from "react";
+import { yearCoverage } from "@/lib/data";
 import { fmt, signed, trendColor } from "@/lib/format";
 import type { Grain, Row } from "./rows";
 
@@ -27,7 +28,7 @@ export const PeriodTable = memo(function PeriodTable({ rows, grain, hover, onHov
                 <tr key={r.key} onMouseEnter={() => onHover(i)} onMouseLeave={() => onHover(null)} className={`border-t border-line ${hover === i ? "bg-hi" : ""}`}>
                   <td className="px-2.5 py-1.5">
                     {r.label}
-                    {r.partial && <span className="ml-1.5 text-[10.5px] text-ink-3">Q1–Q3</span>}
+                    {r.partial && <span className="ml-1.5 text-[10.5px] text-ink-3">{yearCoverage(Number(r.label))}</span>}
                   </td>
                   <td className="px-2.5 py-1.5 text-right text-ink-2">{fmt(r.total)}</td>
                   <td className="px-2.5 py-1.5 text-right" style={{ color: r.yoy === null ? undefined : trendColor(r.yoy) }}>

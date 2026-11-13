@@ -4,6 +4,7 @@
 // loaded on demand (see Dashboard.tsx).
 import { useEffect, useRef, type ReactNode } from "react";
 import { CloseIcon } from "@/components/ui/icons";
+import { BASELINE, COMPLETE_YEARS, DATA_NOTES, LAST_COMPLETE_YEAR, LAST_OBSERVED, PROVINCES, SPECIES, YEARS, quarterLabel } from "@/lib/data";
 
 const Section = ({ title, children }: { title: string; children: ReactNode }) => (
   <section className="border-t border-line pt-4 first:border-t-0 first:pt-0">
@@ -32,13 +33,18 @@ export default function MethodologyModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
         <div className="scroll-thin space-y-5 overflow-y-auto px-5 py-5">
-          <p className="rounded-xl border border-warm/40 bg-warm/10 px-3 py-2 text-[12.5px] text-warm">
-            Every number currently shown is generated sample data with realistic structure. It is not PSA or NASA data. The methods below are the ones applied, and they will run on the real data unchanged once the backend is connected.
-          </p>
-          <Section title="Data sources">
-            <p><b className="text-ink">Ocean conditions.</b> Sea surface temperature (SST, °C) and chlorophyll-a concentration (mg/m³) from NASA MODIS-Aqua Level-3 products (Ocean Biology DAAC). Values are averaged over each area&apos;s coastal waters per quarter. Landlocked provinces (Bukidnon, Cotabato, Agusan del Sur, Lanao del Sur) are given their region&apos;s coastal waters.</p>
-            <p><b className="text-ink">Fisheries production.</b> Quarterly volume of production in tonnes from the Philippine Statistics Authority (PSA), by province and species, covering commercial, municipal and aquaculture sectors.</p>
-            <p><b className="text-ink">Coverage.</b> Mindanao: 6 regions, 28 provinces (Isabela City and the BARMM Special Geographic Area are not listed separately), Q1 2016 to Q3 2026. Annual figures use complete years only (2016–2025).</p>
+          <Section title="Data">
+            <p><b className="text-ink">Source.</b> One table of quarterly observations per province and species: sea surface temperature (SST, °C) and chlorophyll-a (mg/m³) from NASA satellite observations (MODIS-Aqua, Ocean Biology DAAC), and volume of fisheries production in metric tons from the Philippine Statistics Authority (PSA). The app is built from it with <span className="mono text-[12px]">npm run data</span>.</p>
+            <p><b className="text-ink">Coverage.</b> {PROVINCES.length} provinces, {quarterLabel(0)} to {quarterLabel(LAST_OBSERVED)}. 2002 (Q3–Q4 only) is left out; {YEARS[YEARS.length - 1]} has Q1–Q2 only, so annual figures use complete years ({COMPLETE_YEARS[0]}–{LAST_COMPLETE_YEAR}). Bukidnon, Cotabato, Agusan del Sur and Maguindanao del Sur are not in the data and show as grey.</p>
+            <p><b className="text-ink">Species.</b> Each species is a PSA reporting category, some broader than one biological species: {SPECIES.map((s) => `${s.local} = ${s.psa}`).join("; ")}.</p>
+            <p><b className="text-ink">Gaps.</b> A blank yield means not recorded, never zero. Gaps are left as gaps: charts break, analyses skip those periods and report how many, and nothing is filled in or estimated. A year counts for a species only if all four quarters are recorded.</p>
+            <p><b className="text-ink">Regions and Mindanao.</b> Landings add up the recorded provincial values, so a province that starts or stops reporting changes the total. Ocean values are the plain average of the provinces.</p>
+            <p><b className="text-ink">Map colours at sea</b> are interpolated from the province values (inverse-distance weighting). They show the observed numbers smoothly, not extra measurements.</p>
+          </Section>
+          <Section title="Known data issues">
+            {DATA_NOTES.map((n) => (
+              <p key={n.id}>{n.text}</p>
+            ))}
           </Section>
           <Section title="Relationship Explorer">
             <p><b className="text-ink">Pearson r</b> measures how closely the two series follow a straight line. <b className="text-ink">Spearman ρ</b> correlates their ranks, so it captures any consistently rising or falling relationship and is less affected by extreme values. If the two disagree, check the scatterplot for outliers or curvature.</p>
@@ -48,9 +54,13 @@ export default function MethodologyModal({ onClose }: { onClose: () => void }) {
             <p><b className="text-ink">Lag.</b> Pairs landings with ocean conditions 1–4 quarters (or 1–2 years) earlier, to test delayed effects such as recruitment. Each lag drops one pair. Trying many lags raises the chance of a false positive.</p>
             <p><b className="text-ink">Regression line.</b> Ordinary least squares of yield on the ocean variable. R² is the share of variation in yield that the line accounts for.</p>
           </Section>
+          <Section title="Strongest relationships and the starting view">
+            <p>The app opens on the most significant relationship in the data, and the Explorer lists the strongest ones. They come from a search of every species, area (Mindanao, regions, provinces), ocean variable and lag of 0–4 quarters, using the Explorer&apos;s default method: quarterly, seasonal cycle removed, no detrending. Only combinations with at least 40 paired quarters are ranked, and each keeps only its best lag. The starting view skips results affected by a known data issue.</p>
+            <p>Running thousands of tests guarantees some chance findings, so each result also has a <b className="text-ink">q-value</b>: the p-value adjusted with the Benjamini–Hochberg false discovery rate across every test in the search. Being the strongest result does not make it causal. Check the scatterplot and try removing the long-term trend: a relationship that only holds while both series trend together is weaker evidence.</p>
+          </Section>
           <Section title="Summaries">
             <p><b className="text-ink">Trends and changes</b> are measured on a fitted straight line through the seasonally adjusted series, so a single unusual first or last quarter does not dominate. Ocean trends are given per decade.</p>
-            <p><b className="text-ink">Anomalies</b> in the Ocean Monitor are departures from the 2016–2020 mean for the same quarter.</p>
+            <p><b className="text-ink">Anomalies</b> in the Ocean Monitor and on the map are departures from the {BASELINE.from}–{BASELINE.to} mean for the same quarter.</p>
             <p><b className="text-ink">Potential areas of concern</b> are provinces where the ocean variable moved in the direction of concern (SST rising more than 0.15 °C per decade, or chlorophyll-a falling more than 0.04 mg/m³ per decade) and landings fell more than 10%, or where landings fell more than 20%. This is a prompt to look closer, not a diagnosis.</p>
           </Section>
           <Section title="What BlueShift does not do">
@@ -58,7 +68,7 @@ export default function MethodologyModal({ onClose }: { onClose: () => void }) {
           </Section>
           <Section title="API">
             <p className="mono text-[12px]">GET /api/analysis · /api/ocean · /api/fisheries · /api/regional · /api/export?dataset=…</p>
-            <p>Every chart is drawn from these endpoints, and Download CSV returns the same data as the page.</p>
+            <p>Every chart is drawn from these endpoints, and Download CSV returns the same data as the page. Blank cells in a download are unrecorded values.</p>
           </Section>
         </div>
       </div>

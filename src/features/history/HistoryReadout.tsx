@@ -1,4 +1,4 @@
-import { regionName, type Scope } from "@/lib/data";
+import { regionName, yearCoverage, type Scope } from "@/lib/data";
 import { fmt, signed, trendColor } from "@/lib/format";
 import type { Grain, Row } from "./rows";
 
@@ -17,7 +17,7 @@ export function HistoryReadout({ row, scope, grain }: { row: Row | null; scope: 
                   {signed(row.yoy, 1)}% YoY
                 </span>
               )}
-              {row.partial && <span className="ml-2 text-[12px] text-ink-3">Q1–Q3 only</span>}
+              {row.partial && <span className="ml-2 text-[12px] text-ink-3">{yearCoverage(Number(row.label))} only</span>}
             </>
           ) : (
             <span className="text-ink-2">{regionName(scope)}</span>

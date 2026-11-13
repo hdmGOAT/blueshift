@@ -1,61 +1,78 @@
-// Guards the data seam. If you change the sample generators on purpose, the
-// "reference values" test will fail: update the numbers in the same commit.
+// Guards the data seam. Reference values are copied from the raw CSV
+// (data/raw/blueshift_dataset.csv), so these tests check the whole path
+// CSV -> npm run data -> observations.json -> lib/data. If the CSV changes on
+// purpose, rerun `npm run data` and update the numbers in the same commit.
 import { describe, expect, it } from "vitest";
-import { COMPLETE_YEARS, CORRELATION, OCEAN, PROVINCES, PROVINCE_OCEAN, QUARTERS, REGIONS, SCOPES, SPECIES, YIELDS, areaOcean, areaYields, annualTotal, catchMix, provincesOf, topSpecies } from "@/lib/data";
+import {
+  COMPLETE_YEARS, CORRELATION, OCEAN, PROVINCES, QUARTERS, REGIONS, SCOPES, SPECIES, YIELDS,
+  areaOcean, areaYields, catchMix, notesFor, provincesOf, topSpecies,
+} from "@/lib/data";
+
+const at = (year: number, q: number) => QUARTERS.findIndex((x) => x.year === year && x.q === q);
 
 describe("shape", () => {
-  it("has a full series for every scope and species", () => {
+  it("covers Q1 2003 to Q2 2026 with Q1 at index 0", () => {
+    expect(QUARTERS).toHaveLength(94);
+    expect(QUARTERS[0]).toEqual({ index: 0, year: 2003, q: 1 });
+    expect(QUARTERS.at(-1)).toMatchObject({ year: 2026, q: 2 });
+    expect(COMPLETE_YEARS[0]).toBe(2003);
+    expect(COMPLETE_YEARS.at(-1)).toBe(2025);
+  });
+
+  it("has 24 provinces, each in a region, with a full series per species", () => {
+    expect(PROVINCES).toHaveLength(24);
+    for (const r of REGIONS) expect(provincesOf(r.id).length).toBeGreaterThan(0);
+    for (const p of PROVINCES) {
+      expect(areaOcean(p.id)).toHaveLength(QUARTERS.length);
+      for (const s of SPECIES) expect(areaYields(p.id, s.id)).toHaveLength(QUARTERS.length);
+    }
+    expect(PROVINCES.map((p) => p.name)).not.toContain("Bukidnon");
+  });
+
+  it("has a full series for every scope", () => {
     for (const scope of SCOPES) {
       expect(OCEAN[scope]).toHaveLength(QUARTERS.length);
       for (const s of SPECIES) expect(YIELDS[scope][s.id]).toHaveLength(QUARTERS.length);
     }
   });
+});
 
-  it("covers observed quarters only, Q1 2016 to Q3 2026", () => {
-    expect(QUARTERS).toHaveLength(43);
-    expect(COMPLETE_YEARS).toEqual([2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]);
-  });
-
-  it("has a full series for every province", () => {
-    for (const p of PROVINCES) {
-      expect(areaOcean(p.id)).toHaveLength(QUARTERS.length);
-      for (const s of SPECIES) expect(areaYields(p.id, s.id)).toHaveLength(QUARTERS.length);
-    }
-  });
-
-  it("gives every region at least one province, with unique ids", () => {
-    for (const r of REGIONS) expect(provincesOf(r.id).length).toBeGreaterThan(0);
-    expect(new Set(PROVINCES.map((p) => p.id)).size).toBe(PROVINCES.length);
-  });
-
-  it("splits each species across regions with shares that sum to 1", () => {
-    for (const s of SPECIES) {
-      expect(s.shares).toHaveLength(REGIONS.length);
-      expect(s.shares.reduce((a, b) => a + b, 0)).toBeCloseTo(1, 6);
-    }
+describe("reference values from the CSV", () => {
+  it("matches recorded yields, ocean values, and blanks", () => {
+    expect(areaYields("zamboanga-del-norte", "galunggong")[at(2010, 2)].value).toBe(879.43);
+    expect(areaYields("davao-oriental", "tambakol")[at(2024, 3)].value).toBe(1530.74);
+    expect(areaYields("south-cotabato", "tambakol")[at(2026, 2)].value).toBe(6112.46);
+    expect(areaYields("sulu", "tilapia")[at(2003, 1)].value).toBeNull();
+    expect(areaYields("davao-occidental", "bangus")[at(2018, 4)].value).toBeNull();
+    expect(areaOcean("zamboanga-del-norte")[at(2010, 2)].sst).toBeCloseTo(29.306, 3);
+    expect(areaOcean("zamboanga-del-norte")[at(2010, 2)].chl).toBeCloseTo(0.9489, 4);
+    expect(areaOcean("davao-oriental")[at(2024, 3)].sst).toBeCloseTo(30.764, 3);
   });
 });
 
 describe("invariants", () => {
-  it("makes All Mindanao the sum of its regions", () => {
+  it("makes each region the sum of its provinces' recorded values, and Mindanao the sum of regions", () => {
     for (const s of SPECIES)
       for (const { index } of QUARTERS) {
-        const sum = REGIONS.reduce((a, r) => a + YIELDS[r.id][s.id][index].value, 0);
-        expect(YIELDS.all[s.id][index].value).toBeCloseTo(sum, 6);
+        let mindanao = 0;
+        for (const r of REGIONS) {
+          const sum = provincesOf(r.id).reduce((a, p) => a + (areaYields(p.id, s.id)[index].value ?? 0), 0);
+          expect(YIELDS[r.id][s.id][index].value).toBeCloseTo(sum, 6);
+          mindanao += sum;
+        }
+        expect(YIELDS.all[s.id][index].value).toBeCloseTo(mindanao, 6);
       }
   });
 
-  it("makes each region the sum of its provinces", () => {
-    for (const r of REGIONS)
-      for (const s of SPECIES)
-        for (const { index } of QUARTERS) {
-          const sum = provincesOf(r.id).reduce((a, p) => a + areaYields(p.id, s.id)[index].value, 0);
-          expect(sum).toBeCloseTo(YIELDS[r.id][s.id][index].value, 6);
-        }
+  it("averages province ocean values for regions", () => {
+    const ps = provincesOf("xi");
+    const i = at(2015, 3);
+    expect(OCEAN.xi[i].sst).toBeCloseTo(ps.reduce((a, p) => a + areaOcean(p.id)[i].sst, 0) / ps.length, 9);
   });
 
-  it("gives landlocked provinces their region's waters", () => {
-    expect(PROVINCE_OCEAN.bukidnon).toBe(OCEAN.x);
+  it("measures anomalies against the same quarter's baseline (they average ~0 over 2003-2012)", () => {
+    const base = OCEAN.all.slice(0, 40);
+    for (let q = 0; q < 4; q++) expect(base.filter((o) => o.index % 4 === q).reduce((a, o) => a + o.sstAnom, 0) / 10).toBeCloseTo(0, 9);
   });
 
   it("keeps correlations inside [-1, 1]", () => {
@@ -72,30 +89,14 @@ describe("invariants", () => {
     expect(mix).toHaveLength(SPECIES.length);
     expect(mix.reduce((a, m) => a + m.share, 0)).toBeCloseTo(1, 6);
     for (let i = 1; i < mix.length; i++) expect(mix[i - 1].v).toBeGreaterThanOrEqual(mix[i].v);
-  });
-});
-
-describe("reference values (sample data is deterministic)", () => {
-  it("matches known numbers", () => {
-    expect(YIELDS.all.galunggong[42].value).toBeCloseTo(13226.361, 2);
-    expect(YIELDS.ix.galunggong[42].value).toBeCloseTo(4954.651, 2);
-    expect(CORRELATION.all.galunggong.sst).toBeCloseTo(-0.859, 3);
-    expect(CORRELATION.all.galunggong.chl).toBeCloseTo(0.54, 3);
-    expect(OCEAN.all[42].sst).toBeCloseTo(29.497, 3);
-    expect(OCEAN.xi[10].chl).toBeCloseTo(0.265, 3);
-    expect(annualTotal("all", "galunggong", 2025)).toBeGreaterThan(0);
-    expect(areaYields("zamboanga-del-norte", "tamban")[42].value).toBeCloseTo(3607.741, 2);
-    expect(areaOcean("davao-oriental")[10].sst).toBeCloseTo(29.305, 3);
+    expect(topSpecies("all")).toHaveLength(10);
   });
 
-  it("matches the grand total of all landings", () => {
-    let sum = 0;
-    for (const scope of SCOPES) for (const s of SPECIES) for (const p of YIELDS[scope][s.id]) sum += p.value;
-    expect(sum).toBeCloseTo(8780769.77, 2);
-  });
-
-  it("ranks species per region", () => {
-    expect(topSpecies("ix")).toEqual(["tamban", "galunggong", "bangus", "tulingan", "dilis", "alumahan", "matambaka", "tilapia", "tambakol", "bisugo"]);
-    expect(catchMix("xi", 42)[0].s.id).toBe("bangus");
+  it("raises data notes only where they apply", () => {
+    expect(notesFor("zamboanga-del-sur", 2022, 2022).map((n) => n.id)).toEqual(["zds-2022"]);
+    expect(notesFor("zamboanga-del-sur", 2010, 2020)).toEqual([]);
+    expect(notesFor("all", 2003, 2026).map((n) => n.id).sort()).toEqual(["davocc-2019", "zds-2022"]);
+    expect(notesFor("xiii", 2003, 2026)).toEqual([]);
+    expect(notesFor("not-a-place", 2003, 2026)).toEqual([]);
   });
 });

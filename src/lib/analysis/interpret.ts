@@ -1,6 +1,6 @@
 // Plain-language reading of an analysis: direction, strength, significance,
 // what the slope means, and the limitations that apply. Pure.
-import { strengthLabel } from "@/lib/data";
+import { isRegion, strengthLabel } from "@/lib/data";
 import type { AnalysisParams } from "./params";
 import type { LagRow, Stats } from "./relationship";
 
@@ -21,7 +21,11 @@ type Input = {
   speciesName: string;
   applied: { deseason: boolean; detrend: boolean };
   requestedDeseason: boolean;
-  landlocked: boolean;
+  /** Periods in range, and how many had no recorded landings. */
+  periods: number;
+  missing: number;
+  /** Known data-quality issues for this area and range. */
+  notes: string[];
   stats: Stats | null;
   lagProfile: LagRow[];
 };
@@ -53,7 +57,10 @@ export function interpret(a: Input): Interpretation {
   if (p.resolution === "quarterly" && !a.applied.deseason && !a.requestedDeseason)
     caveats.push("Seasonal adjustment is off: both series have seasonal cycles, which can create a correlation that is about the time of year rather than ocean conditions.");
   if (!a.applied.detrend) caveats.push("Long-term trends are not removed. Two series that both drift over the decade can correlate without being linked.");
-  if (a.landlocked) caveats.push(`${a.areaName} has no coastline; its ocean values are its region's coastal waters, and its landings are mostly freshwater and pond production.`);
+  if (a.missing) caveats.unshift(`${a.missing} of ${a.periods} ${unitName(p, a.periods)} have no recorded landings and were left out (not counted as zero).`);
+  caveats.unshift(...a.notes);
+  if (p.area === "all" || isRegion(p.area))
+    caveats.push("Region and Mindanao landings add up the recorded provincial values, so gaps and changes in reporting coverage show up as changes in the total.");
   caveats.push("Correlation is not causation: landings also depend on fishing effort, fleet size, regulations, prices and reporting.");
   caveats.push("Consecutive periods are not independent, so p-values here are likely optimistic.");
 
